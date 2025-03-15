@@ -14,33 +14,39 @@ class ManhwaDataManager:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.sheet_id = sheet_id
-            cls._instance.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
             cls._instance.gc = gspread.api_key(api_key)
             cls._instance.sh = cls._instance.gc.open_by_key(sheet_id)
         return cls._instance
 
-    def __init__(self, sheet_id, api_key):
-        if not hasattr(self, "initialized"):
-            self.sheet_id = sheet_id
-            self.supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-            self.gc = gspread.api_key(api_key)
-            self.sh = self.gc.open_by_key(sheet_id)
-            self.initialized = True
+    def parse_column_ranges(self, column_string):
+        """Parses a string of column ranges into a list of column indexes."""
+        selected_columns = set()
 
-    def fetch_data(self, sheet_name, column_index, header_row_index):
+        # Split by commas and process each part
+        for part in column_string.split(","):
+            part = part.strip()  # Remove spaces
+            if ":" in part:  # Range format "x:y"
+                start, end = map(int, part.split(":"))
+                selected_columns.update(range(start, end + 1))
+            else:  # Single column
+                selected_columns.add(int(part))
+
+        return sorted(selected_columns)
+
+    def fetch_data(self, sheet_name, column_string, header_row_index):
         """Fetches manhwa data from Google Sheets."""
         try:
             worksheet = self.sh.worksheet(sheet_name)
 
             all_data = worksheet.get_values()
-            starting_column_index = column_index[0]
-            ending_column_index = column_index[1] + 1
+            selected_columns = self.parse_column_ranges(column_string)
 
-            headers = all_data[header_row_index][
-                starting_column_index:ending_column_index
-            ]
+            # Extract headers
+            headers = [all_data[header_row_index][col] for col in selected_columns]
+
+            # Extract data
             data = [
-                row[starting_column_index:ending_column_index]
+                [row[col] for col in selected_columns]
                 for row in all_data[header_row_index + 1 :]
             ]
             dict_data = gspread.utils.to_records(headers, data)
@@ -62,24 +68,24 @@ class ManhwaDataManager:
 
     def fetch_master_list(self):
         sheet_name = "Copy of Master List"
-        self.fetch_data(sheet_name, column_index=(0, 9), header_row_index=7)
+        self.fetch_data(sheet_name, "0:9", header_row_index=7)
 
     def fetch_genres(self):
         sheet_name = "Genres"
-        self.fetch_data(sheet_name, column_index=(3, 4), header_row_index=1)
+        self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_categories(self):
         sheet_name = "Categories"
-        self.fetch_data(sheet_name, column_index=(3, 5), header_row_index=1)
+        self.fetch_data(sheet_name, "3, 5", header_row_index=1)
 
     def fetch_authors(self):
         sheet_name = "Authors"
-        self.fetch_data(sheet_name, column_index=(3, 3), header_row_index=1)
+        self.fetch_data(sheet_name, "3", header_row_index=1)
 
     def fetch_status(self):
         sheet_name = "Status"
-        self.fetch_data(sheet_name, column_index=(3, 4), header_row_index=1)
+        self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_rating(self):
         sheet_name = "Rating"
-        self.fetch_data(sheet_name, column_index=(3, 4), header_row_index=1)
+        self.fetch_data(sheet_name, "3:4", header_row_index=1)
