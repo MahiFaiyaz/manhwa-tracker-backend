@@ -14,7 +14,7 @@ class ManhwaDataManager:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.sheet_id = sheet_id
-            cls._instance.supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            cls._instance.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
             cls._instance.gc = gspread.api_key(api_key)
             cls._instance.sh = cls._instance.gc.open_by_key(sheet_id)
         return cls._instance
