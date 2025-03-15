@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.services.google_sheets_service import fetch_sheet_data
+from app.services.manhwa_data_manager import fetch_sheet_data
 
 router = APIRouter(prefix="/sheets", tags=["Google Sheets"])
 
