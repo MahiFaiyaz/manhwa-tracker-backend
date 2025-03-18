@@ -285,27 +285,35 @@ class ManhwaSync:
     def sync_genres(self):
         """Syncs genres data to Supabase."""
         data = self.load_json("genres.json")
-        self.sync_items("genres", data, "Genre")
+        self.sync_items("genres", data, {"Genre": "name", "Description": "description"})
 
     def sync_categories(self):
         """Syncs categories data to Supabase."""
         data = self.load_json("categories.json")
-        self.sync_items("categories", data, "Main Categories")
+        self.sync_items(
+            "categories",
+            data,
+            {"Main Categories": "name", "Description": "description"},
+        )
 
     def sync_authors(self):
         """Syncs authors data to Supabase."""
         data = self.load_json("authors.json")
-        self.sync_items("authors", data, "Authors")
+        self.sync_items("authors", data, {"Authors": "name"})
 
     def sync_ratings(self):
         """Syncs authors data to Supabase."""
         data = self.load_json("rating.json")
-        self.sync_items("rating", data, "Rating")
+        self.sync_items(
+            "rating", data, {"Rating": "name", "Description": "description"}
+        )
 
     def sync_status(self):
         """Syncs authors data to Supabase."""
         data = self.load_json("status.json")
-        self.sync_items("status", data, "Status")
+        self.sync_items(
+            "status", data, {"Status": "name", "Description": "description"}
+        )
 
     def sync_all(self):
         """Runs all sync functions."""
