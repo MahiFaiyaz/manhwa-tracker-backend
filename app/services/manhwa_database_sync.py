@@ -77,44 +77,59 @@ class ManhwaSync:
                         f"Failed to update {table_name} ID {item_id}: {update_response.error}"
                     )
 
-    def sync_items(
-        self,
-        table_name,
-        items,
-        json_key,
-        db_key="name",
-    ):
+    def sync_items(self, table_name, data, json_to_db_map):
         """Syncs data to a given table. Updates fields if values differ."""
-        # Convert JSON data into a dictionary for quick lookups
-        existing_values = {item[json_key]: item for item in items}
-        # Fetch existing data from the database
-        existing_db_data = (
-            self.supabase.table(table_name).select("id, " + db_key).execute()
-        )
-        db_records = {row[db_key]: row["id"] for row in existing_db_data.data}
+        unique_key_json = list(data[0].keys())[0]
+        unique_key_db = json_to_db_map[unique_key_json]  # Convert to DB column name
 
-        # Find entries to delete (exist in DB but not in JSON)
-        to_delete = [
-            db_records[name] for name in db_records if name not in existing_values
-        ]
+        # Fetch existing records from the database
+        # existing_db_data = (
+        # self.supabase.table(table_name).select(f"id, {unique_key_db}").execute()
+        # )
 
-        for item in items:
-            name = item.get(
-                json_key
-            )  # This is the value (e.g., Genre, Category, Author)
+        # db_records = {row[unique_key_db]: row["id"] for row in existing_db_data.data}
+        db_records = self.get_all_records(table_name, unique_key_db)
+        new_records = []
+        updated_records = []
+        seen_records = set()
+        seen_json_values = set()  # To track duplicates in the JSON data
 
-            # Get the ID of the item (or create if it doesn't exist)
-            item_id = self.get_or_create(table_name, name, db_key)
-            # Check and update fields if necessary
-            # Convert field names to lowercase to match DB column names
-            field_updates = {
-                field.lower(): item[field] for field in item if field != json_key
+        for entry in data:
+            unique_value = entry[unique_key_json]  # Get the unique value from JSON
+
+            if unique_value in seen_json_values:
+                continue
+            seen_json_values.add(unique_value)
+
+            record_data = {
+                db_key: entry[json_key]
+                for json_key, db_key in json_to_db_map.items()
+                if json_key in entry
             }
 
-            # Update fields in a single call
-            if field_updates:
-                self.update_item_fields(table_name, item_id, field_updates)
-        # Delete removed items from the database
+            if unique_value in db_records:
+                # Update existing record
+                record_id = db_records[unique_value]
+                updated_records.append({**record_data, "id": record_id})
+                seen_records.add(unique_value)
+            else:
+                # Insert new record
+                new_records.append(record_data)
+                seen_records.add(unique_value)
+
+        # Bulk insert new records
+        if new_records:
+            response = self.supabase.table(table_name).insert(new_records).execute()
+            if response.data:
+                for row in response.data:
+                    db_records[row[unique_key_db]] = row["id"]
+
+        # Bulk update existing records
+        if updated_records:
+            self.supabase.table(table_name).upsert(updated_records).execute()
+
+        # Delete records that are no longer in the JSON data
+        to_delete = [db_records[key] for key in db_records if key not in seen_records]
         if to_delete:
             self.supabase.table(table_name).delete().in_("id", to_delete).execute()
 
