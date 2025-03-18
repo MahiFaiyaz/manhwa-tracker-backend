@@ -1,11 +1,7 @@
 from fastapi import FastAPI
-from app.routers import google_sheets
+from app.routers import sync, manhwa_finder
 
-app = FastAPI(title="Manhwa Tracker API")
+app = FastAPI()
 
-app.include_router(google_sheets.router)
-
-
-@app.get("/")
-def home():
-    return {"message": "API is running"}
+app.include_router(manhwa_finder.router)
+app.include_router(sync.router)  # This adds the /sync route
