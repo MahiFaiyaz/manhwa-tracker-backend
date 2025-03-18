@@ -170,13 +170,30 @@ class ManhwaSync:
         """Syncs manhwa data to Supabase, updating and deleting entries properly."""
         data = self.load_json("copy of master list.json")
 
-        # Get all existing manhwas from the database
-        existing_db_data = (
-            self.supabase.table("manhwas").select("id, name, synopsis").execute()
-        )
-        db_records = {
-            (row["name"], row["synopsis"]): row["id"] for row in existing_db_data.data
-        }
+        db_records = {}
+        page = 1
+        while True:
+            # Fetch a page of records
+            existing_db_data = (
+                self.supabase.table("manhwas")
+                .select("id, name, synopsis")
+                .range(
+                    (page - 1) * 1000, page * 1000 - 1
+                )  # Pagination: fetch 1000 records per page
+                .execute()
+            )
+
+            # If no records returned, break the loop
+            if not existing_db_data.data:
+                break
+
+            # Add records to db_records
+            for row in existing_db_data.data:
+                # Build composite key (e.g., (name, synopsis))
+                db_records[(row["name"], row["synopsis"])] = row["id"]
+
+            # Move to the next page
+            page += 1
 
         # Fetch existing status and rating IDs
         status_map = self.get_existing_ids("status")
