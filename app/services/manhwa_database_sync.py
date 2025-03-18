@@ -133,6 +133,34 @@ class ManhwaSync:
         if to_delete:
             self.supabase.table(table_name).delete().in_("id", to_delete).execute()
 
+    def get_all_records(self, table_name, unique_key_db):
+        """Fetch all records from the given table."""
+        db_records = {}
+        page = 1
+        while True:
+            # Fetch a page of records
+            existing_db_data = (
+                self.supabase.table(table_name)
+                .select(f"id, {unique_key_db}")
+                .range(
+                    (page - 1) * 1000, page * 1000 - 1
+                )  # Pagination: fetch 1000 records per page
+                .execute()
+            )
+
+            # If no records returned, break the loop
+            if not existing_db_data.data:
+                break
+
+            # Add records to db_records
+            for row in existing_db_data.data:
+                db_records[row[unique_key_db]] = row["id"]
+
+            # Move to the next page
+            page += 1
+
+        return db_records
+
     def get_existing_ids(self, table_name):
         """Fetch all existing items from a table and return a dictionary mapping names to IDs."""
         response = self.supabase.table(table_name).select("id, name").execute()
