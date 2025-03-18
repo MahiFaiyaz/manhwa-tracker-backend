@@ -171,8 +171,12 @@ class ManhwaSync:
         data = self.load_json("copy of master list.json")
 
         # Get all existing manhwas from the database
-        existing_db_data = self.supabase.table("manhwas").select("id, name").execute()
-        db_records = {row["name"]: row["id"] for row in existing_db_data.data}
+        existing_db_data = (
+            self.supabase.table("manhwas").select("id, name, synopsis").execute()
+        )
+        db_records = {
+            (row["name"], row["synopsis"]): row["id"] for row in existing_db_data.data
+        }
 
         # Fetch existing status and rating IDs
         status_map = self.get_existing_ids("status")
@@ -181,16 +185,16 @@ class ManhwaSync:
         # Prepare lists for bulk insert/update
         new_manhwas = []
         updated_manhwas = []
-        new_titles = set()
+        seen_manhwas = set()  # Set to ensure no duplicates
 
         for entry in data:
             title = entry["Title"]
-            # Get status and rating IDs efficiently
-            status_name = entry["Status"]
-            rating_name = entry["Rating"]
+            synopsis = entry["Synopsis"]
+            key = (title, synopsis)
 
-            status_id = status_map.get(status_name)
-            rating_id = rating_map.get(rating_name)
+            # Get status and rating IDs efficiently
+            status_id = status_map.get(entry["Status"])
+            rating_id = rating_map.get(entry["Rating"])
 
             manhwa_data = {
                 "name": title,
@@ -211,21 +215,23 @@ class ManhwaSync:
                 "rating_id": rating_id,
             }
 
-            if title in db_records:
+            if key in db_records:
                 # Update existing manhwas
-                manhwa_id = db_records[title]
-                updated_manhwas.append({**manhwa_data, "id": manhwa_id})
+                manhwa_id = db_records[key]
+                if key not in seen_manhwas:
+                    updated_manhwas.append({**manhwa_data, "id": manhwa_id})
+                    seen_manhwas.add(key)
             else:
                 # Insert new manhwas
                 new_manhwas.append(manhwa_data)
-                new_titles.add(title)
+                seen_manhwas.add(key)
 
         # Bulk insert new manhwas
         if new_manhwas:
             response = self.supabase.table("manhwas").insert(new_manhwas).execute()
             if response.data:
                 for row in response.data:
-                    db_records[row["name"]] = row["id"]
+                    db_records[(row["name"], row["synopsis"])] = row["id"]
 
         # Bulk update existing manhwas
         if updated_manhwas:
@@ -233,13 +239,7 @@ class ManhwaSync:
 
         # Bulk process relationships
         self.bulk_link_manhwa_relations(data, db_records)
-
-        to_delete = [
-            db_records[title]
-            for title in db_records
-            if title not in [entry["Title"] for entry in data]
-        ]
-
+        to_delete = [db_records[key] for key in db_records if key not in seen_manhwas]
         # Delete removed manhwas
         if to_delete:
             self.supabase.table("manhwas").delete().in_("id", to_delete).execute()
