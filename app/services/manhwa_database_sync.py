@@ -14,7 +14,7 @@ class ManhwaSync:
             cls._instance.data_folder = "manhwa_data"
             cls._instance._cache = (
                 {}
-            )  # Caches IDs for fast lookups (genres, authors, etc.)
+            )  # Caches IDs for fast lookups (genres, categories, etc.)
         return cls._instance
 
     def load_json(self, filename):
@@ -23,71 +23,11 @@ class ManhwaSync:
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def get_or_create(self, table, name, cache=None):
-        """Fetches or inserts an entry and caches it for efficiency."""
-
-        if cache is None:
-            cache = self.get_existing_ids(table)
-
-        if name in cache:
-            return cache[name]
-
-        # Insert new entry
-        response = self.supabase.table(table).insert({"name": name}).execute()
-        if response.data:
-            new_id = response.data[0]["id"]
-            cache[name] = new_id  # Update cache
-            return new_id
-        else:
-            raise ValueError(f"Failed to insert {name} into {table}")
-
-    def update_item_fields(self, table_name, item_id, item_data):
-        """Updates a specific field for an item if the value is different."""
-        # Fetch the current value of the field
-        current_data = (
-            self.supabase.table(table_name)
-            .select(",".join(item_data.keys()))  # Select only necessary fields
-            .eq("id", item_id)
-            .execute()
-        )
-
-        if current_data.data:
-            existing_item = current_data.data[0]  # Extract the first record
-
-            # Identify which fields have changed
-            updates = {
-                field: value
-                for field, value in item_data.items()
-                if existing_item.get(field) != value
-            }
-
-            # If there are changes, update the record in one request
-            if updates:
-                update_response = (
-                    self.supabase.table(table_name)
-                    .update(updates)
-                    .eq("id", item_id)
-                    .execute()
-                )
-
-                if update_response.data:
-                    pass  # success, no error
-                elif update_response.error:
-                    print(
-                        f"Failed to update {table_name} ID {item_id}: {update_response.error}"
-                    )
-
     def sync_items(self, table_name, data, json_to_db_map):
         """Syncs data to a given table. Updates fields if values differ."""
         unique_key_json = list(data[0].keys())[0]
         unique_key_db = json_to_db_map[unique_key_json]  # Convert to DB column name
 
-        # Fetch existing records from the database
-        # existing_db_data = (
-        # self.supabase.table(table_name).select(f"id, {unique_key_db}").execute()
-        # )
-
-        # db_records = {row[unique_key_db]: row["id"] for row in existing_db_data.data}
         db_records = self.get_all_records(table_name, unique_key_db)
         new_records = []
         updated_records = []
@@ -95,14 +35,16 @@ class ManhwaSync:
         seen_json_values = set()  # To track duplicates in the JSON data
 
         for entry in data:
-            unique_value = entry[unique_key_json]  # Get the unique value from JSON
+            unique_value = entry[
+                unique_key_json
+            ].strip()  # Get the unique value from JSON
 
             if unique_value in seen_json_values:
                 continue
             seen_json_values.add(unique_value)
 
             record_data = {
-                db_key: entry[json_key]
+                db_key: entry[json_key].strip()
                 for json_key, db_key in json_to_db_map.items()
                 if json_key in entry
             }
@@ -133,7 +75,7 @@ class ManhwaSync:
         if to_delete:
             self.supabase.table(table_name).delete().in_("id", to_delete).execute()
 
-    def get_all_records(self, table_name, unique_key_db):
+    def get_all_records(self, table_name, unique_key_db="name"):
         """Fetch all records from the given table."""
         db_records = {}
         page = 1
@@ -160,11 +102,6 @@ class ManhwaSync:
             page += 1
 
         return db_records
-
-    def get_existing_ids(self, table_name):
-        """Fetch all existing items from a table and return a dictionary mapping names to IDs."""
-        response = self.supabase.table(table_name).select("id, name").execute()
-        return {row["name"]: row["id"] for row in response.data}
 
     def sync_manhwas(self):
         """Syncs manhwa data to Supabase, updating and deleting entries properly."""
@@ -196,8 +133,8 @@ class ManhwaSync:
             page += 1
 
         # Fetch existing status and rating IDs
-        status_map = self.get_existing_ids("status")
-        rating_map = self.get_existing_ids("rating")
+        status_map = self.get_all_records("status")
+        rating_map = self.get_all_records("rating")
 
         # Prepare lists for bulk insert/update
         new_manhwas = []
@@ -205,8 +142,8 @@ class ManhwaSync:
         seen_manhwas = set()  # Set to ensure no duplicates
 
         for entry in data:
-            title = entry["Title"]
-            synopsis = entry["Synopsis"]
+            title = entry["Title"].strip()
+            synopsis = entry["Synopsis"].strip()
             key = (title, synopsis)
 
             # Get status and rating IDs efficiently
@@ -215,9 +152,9 @@ class ManhwaSync:
 
             manhwa_data = {
                 "name": title,
-                "synopsis": entry["Synopsis"],
+                "synopsis": synopsis,
                 "year_released": int(entry["Year Released"]),
-                "chapters": entry["Chapter(s)"],
+                "chapters": entry["Chapter(s)"].strip(),
                 "chapter_min": (
                     0
                     if "Less than" in entry["Chapter(s)"]
@@ -262,23 +199,46 @@ class ManhwaSync:
             self.supabase.table("manhwas").delete().in_("id", to_delete).execute()
 
     def bulk_link_manhwa_relations(self, data, db_records):
-        """Efficiently links manhwas with genres, categories, and authors in bulk."""
-        genre_records, category_records, author_records = [], [], []
+        """Efficiently links manhwas with genres, categories in bulk."""
+        (
+            genre_records,
+            category_records,
+        ) = (
+            [],
+            [],
+        )
+        genre_map = self.get_all_records("genres")
+        category_map = self.get_all_records("categories")
 
         for entry in data:
-            manhwa_id = db_records[entry["Title"]]
+            title = entry["Title"].strip()
+            synopsis = entry["Synopsis"].strip()
+            key = (title, synopsis)
 
-            # Get all genre, category, and author IDs in one go
+            manhwa_id = db_records[key]
+            # Get all genre, category IDs in one go
             genre_ids = [
-                self.get_or_create("genres", g) for g in entry["Genre(s)"].split(", ")
+                genre_map.get(genre) for genre in entry["Genre(s)"].split(", ")
             ]
-            category_ids = [
-                self.get_or_create("categories", c)
-                for c in entry["Categories"].split(", ")
-            ]
-            author_ids = [
-                self.get_or_create("authors", a) for a in entry["Author(s)"].split(", ")
-            ]
+
+            category_fix_map = {
+                "Dungeon/Towers": "Dungeon/Tower",
+                "Multiple Protagonists": "Multiple Protagonist",
+            }
+            category_ids = []
+            for category in entry["Categories"].split(", "):
+                category_id = category_map.get(category)
+                if category_id:
+                    category_ids.append(category_id)
+                else:
+                    if category in category_fix_map:
+                        category_ids.append(
+                            category_map.get(category_fix_map[category])
+                        )
+                    else:
+                        category_ids.append(None)
+                        print(category_ids)
+                        print(f"{category} not found in category list.")
 
             # Prepare records for batch insert
             genre_records.extend(
@@ -287,17 +247,11 @@ class ManhwaSync:
             category_records.extend(
                 {"manhwa_id": manhwa_id, "category_id": cid} for cid in category_ids
             )
-            author_records.extend(
-                {"manhwa_id": manhwa_id, "author_id": aid} for aid in author_ids
-            )
-
         # Bulk insert all relationships
         if genre_records:
             self.supabase.table("manhwa_genres").upsert(genre_records).execute()
         if category_records:
             self.supabase.table("manhwa_categories").upsert(category_records).execute()
-        if author_records:
-            self.supabase.table("manhwa_authors").upsert(author_records).execute()
 
     def sync_genres(self):
         """Syncs genres data to Supabase."""
@@ -313,20 +267,15 @@ class ManhwaSync:
             {"Main Categories": "name", "Description": "description"},
         )
 
-    def sync_authors(self):
-        """Syncs authors data to Supabase."""
-        data = self.load_json("authors.json")
-        self.sync_items("authors", data, {"Authors": "name"})
-
     def sync_ratings(self):
-        """Syncs authors data to Supabase."""
+        """Syncs ratings data to Supabase."""
         data = self.load_json("rating.json")
         self.sync_items(
             "rating", data, {"Rating": "name", "Description": "description"}
         )
 
     def sync_status(self):
-        """Syncs authors data to Supabase."""
+        """Syncs status data to Supabase."""
         data = self.load_json("status.json")
         self.sync_items(
             "status", data, {"Status": "name", "Description": "description"}
@@ -334,10 +283,9 @@ class ManhwaSync:
 
     def sync_all(self):
         """Runs all sync functions."""
-        # self.sync_genres()
-        # self.sync_categories()
-        # self.sync_authors()
-        # self.sync_ratings()
-        # self.sync_status()
+        self.sync_genres()
+        self.sync_categories()
+        self.sync_ratings()
+        self.sync_status()
         self.sync_manhwas()
         print("Sync complete.")
