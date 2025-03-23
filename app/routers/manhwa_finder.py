@@ -6,9 +6,7 @@ router = APIRouter()
 
 
 def get_db_manager():
-    return ManhwaDatabaseManager(
-        supabase_url="your_supabase_url", supabase_key="your_supabase_key"
-    )
+    return ManhwaDatabaseManager()
 
 
 @router.get("/genres")
