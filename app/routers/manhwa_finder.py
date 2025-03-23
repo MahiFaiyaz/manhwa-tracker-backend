@@ -30,12 +30,7 @@ def get_statuses(db: ManhwaDatabaseManager = Depends(get_db_manager)):
 
 
 @router.get("/manhwas")
-def get_all_manhwas(db: ManhwaDatabaseManager = Depends(get_db_manager)):
-    return db.get_all_manhwas()
-
-
-@router.get("/manhwas/filter")
-def get_filtered_manhwas(
+def get_manhwas(
     genres: Optional[List[str]] = Query(None),
     categories: Optional[List[str]] = Query(None),
     min_chapters: Optional[int] = None,
@@ -45,7 +40,7 @@ def get_filtered_manhwas(
     ratings: Optional[List[str]] = Query(None),
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
-    return db.get_filtered_manhwas(
+    return db.get_manhwas(
         genres=genres,
         categories=categories,
         min_chapters=min_chapters,
