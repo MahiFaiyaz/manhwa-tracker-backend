@@ -29,16 +29,7 @@ class ManhwaDatabaseManager:
         response = self.supabase.table("status").select("name, description").execute()
         return response.data if response.data else []
 
-    def get_all_manhwas(self):
-        """Fetch all manhwas and their details."""
-        response = (
-            self.supabase.table("manhwas")
-            .select("*", "status(name)", "rating(name)")
-            .execute()
-        )
-        return response.data if response.data else []
-
-    def get_filtered_manhwas(
+    def get_manhwas(
         self,
         genres: Optional[List[str]] = None,
         categories: Optional[List[str]] = None,
