@@ -1,10 +1,11 @@
 from supabase import create_client
 from typing import List, Optional
+from app.config import SUPABASE_URL, SUPABASE_KEY
 
 
 class ManhwaDatabaseManager:
-    def __init__(self, supabase_url, supabase_key):
-        self.supabase = create_client(supabase_url, supabase_key)
+    def __init__(self):
+        self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
     def get_genres(self):
         """Fetch all genres with name and description."""
