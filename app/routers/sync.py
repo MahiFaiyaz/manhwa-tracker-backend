@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks
 from app.services.manhwa_database_sync import ManhwaSync
-from app.services.google_sheets_manager import ManhwaDataManager
+from app.services.google_sheets_manager import GoogleSheetsManager
 
 router = APIRouter()
 
@@ -11,7 +11,7 @@ async def sync(background_tasks: BackgroundTasks):
 
     def sync_task():
         # Create instances of ManhwaDataManager and ManhwaSync
-        data_manager = ManhwaDataManager()
+        data_manager = GoogleSheetsManager()
         syncer = ManhwaSync()
 
         # Fetch data first
