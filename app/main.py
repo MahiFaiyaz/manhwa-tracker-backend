@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from app.routers import sync, manhwa_finder
+from app.routers import sync, manhwa_finder, health
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["60 per minute"])
 
@@ -24,7 +25,13 @@ def read_root():
     return {"message": "Welcome to the Manhwa Finder API!"}
 
 
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/docs")
+
+
 # Include routers
 app.include_router(manhwa_finder.router)
 # This adds routes from sync.py to the app
 app.include_router(sync.router)
+app.include_router(health.router)
