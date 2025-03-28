@@ -5,7 +5,7 @@ from app.config import SYNC_API_KEY
 router = APIRouter()
 
 
-@router.post("/sync")
+@router.post("/sync", tags=["Sync"])
 async def sync(background_tasks: BackgroundTasks, api_key=Header(None)):
     # Run both fetch_all and sync_all methods in the background
     if api_key != SYNC_API_KEY:
