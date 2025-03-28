@@ -2,34 +2,34 @@ from fastapi import APIRouter, Depends, Query
 from typing import List, Optional
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 
-router = APIRouter()
+router = APIRouter(tags=["Manhwa-Finder"])
 
 
 def get_db_manager():
     return ManhwaDatabaseManager()
 
 
-@router.get("/genres", tags=["Manhwa-Finder"])
+@router.get("/genres")
 def get_genres(db: ManhwaDatabaseManager = Depends(get_db_manager)):
     return db.get_genres()
 
 
-@router.get("/categories", tags=["Manhwa-Finder"])
+@router.get("/categories")
 def get_categories(db: ManhwaDatabaseManager = Depends(get_db_manager)):
     return db.get_categories()
 
 
-@router.get("/ratings", tags=["Manhwa-Finder"])
+@router.get("/ratings")
 def get_ratings(db: ManhwaDatabaseManager = Depends(get_db_manager)):
     return db.get_ratings()
 
 
-@router.get("/statuses", tags=["Manhwa-Finder"])
+@router.get("/statuses")
 def get_statuses(db: ManhwaDatabaseManager = Depends(get_db_manager)):
     return db.get_statuses()
 
 
-@router.get("/manhwas", tags=["Manhwa-Finder"])
+@router.get("/manhwas")
 def get_manhwas(
     genres: Optional[List[str]] = Query(None),
     categories: Optional[List[str]] = Query(None),

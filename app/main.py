@@ -20,7 +20,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 
 # Add a root route
-@app.get("/")
+@app.get("/", tags=["Root"])
 def read_root():
     return {"message": "Welcome to the Manhwa Finder API!"}
 
