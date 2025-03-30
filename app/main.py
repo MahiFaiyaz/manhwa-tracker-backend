@@ -4,7 +4,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from app.routers import sync, manhwa_finder, health
+from app.routers import sync, manhwa_finder, health, users
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["60 per minute"])
 
@@ -29,3 +29,4 @@ app.include_router(manhwa_finder.router)
 # This adds routes from sync.py to the app
 app.include_router(sync.router)
 app.include_router(health.router)
+app.include_router(users.router)
