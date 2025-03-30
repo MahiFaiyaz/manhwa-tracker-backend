@@ -30,6 +30,26 @@ class ManhwaDatabaseManager:
         response = self.supabase.table("status").select("name, description").execute()
         return response.data if response.data else []
 
+    def get_manhwas_without_image(self):
+        """Fetch manhwas with missing images."""
+        response = (
+            self.supabase.table("manhwas")
+            .select("id, name, image_url")
+            .is_("image_url", None)
+            .execute()
+        )
+        return response.data if response.data else []
+
+    def update_image_url(self, manhwa_id: int, image_url: str):
+        """Update the image URL for a specific manhwa."""
+        response = (
+            self.supabase.table("manhwas")
+            .update({"image_url": image_url})
+            .eq("id", manhwa_id)
+            .execute()
+        )
+        return response.data if response.data else []
+
     def get_manhwas(
         self,
         genres: Optional[List[str]] = None,
