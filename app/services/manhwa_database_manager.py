@@ -146,7 +146,6 @@ class ManhwaDatabaseManager:
             manhwa.pop("status_id", None)
             manhwa.pop("rating_id", None)
             manhwa.pop("created_at", None)
-            manhwa.pop("id", None)
 
         return response.data if response.data else []
 
