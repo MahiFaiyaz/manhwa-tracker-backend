@@ -18,7 +18,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-
+# Root API
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse(url="/docs")
