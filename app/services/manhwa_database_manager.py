@@ -203,3 +203,74 @@ class ManhwaDatabaseManager:
             .execute()
         )
         return [row["id"] for row in response.data] if response.data else []
+
+    def sign_up(self, email: str, password: str):
+        """Sign up a new user."""
+        return self.supabase.auth.sign_up(
+            {
+                "email": email,
+                "password": password,
+            }
+        )
+
+    def login(self, email: str, password: str):
+        """Log in an existing user."""
+        return self.supabase.auth.sign_in_with_password(
+            {
+                "email": email,
+                "password": password,
+            }
+        )
+
+    def add_progress(self, manhwa_id: int, current_chapter: int, reading_status: str):
+        """Add or update progress for a specific manhwa."""
+        response = (
+            self.supabase.table("user_manhwa_progress")
+            .insert(
+                {
+                    "manhwa_id": manhwa_id,
+                    "current_chapter": current_chapter,
+                    "status": reading_status,
+                }
+            )
+            .execute()
+        )
+        print(response)
+        return response.data if response.data else []
+
+    def update_progress(
+        self, manhwa_id: int, current_chapter: int, reading_status: str
+    ):
+        """Update progress for a specific manhwa."""
+        response = (
+            self.supabase.table("user_manhwa_progress")
+            .update(
+                {
+                    "current_chapter": current_chapter,
+                    "status": reading_status,
+                }
+            )
+            .eq("manhwa_id", manhwa_id)
+            .execute()
+        )
+        return response.data if response.data else []
+
+    def get_user_progress(self, user_id: str):
+        """Fetch progress for a specific user."""
+        response = (
+            self.supabase.table("user_manhwa_progress")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        return response.data if response.data else []
+
+    def get_manhwa_progress(self, manhwa_id: str):
+        """Fetch progress for a specific manhwa."""
+        response = (
+            self.supabase.table("user_manhwa_progress")
+            .select("*")
+            .eq("manhwa_id", manhwa_id)
+            .execute()
+        )
+        return response.data if response.data else []
