@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 
 router = APIRouter(tags=["users"])
@@ -12,34 +12,53 @@ def get_db_manager():
 async def sign_up(
     email: str, password: str, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
-    db.sign_up(email, password)
+    response = db.sign_up(email, password)
+    if "error" in response:
+        raise HTTPException(status_code=400, detail=response["error"]["message"])
+    return response
 
 
 @router.post("/login")
 async def login(
     email: str, password: str, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
-    db.login(email, password)
+    try:
+        response = db.login(email, password)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return response
 
 
 @router.post("/progress")
 async def add_progress(
+    request: Request,
     manhwa_id: int,
     current_chapter: int,
-    status: str,
+    reading_status: str,
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
-    db.add_progress(manhwa_id, current_chapter, status)
+    user_id = request.state.user_id
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
+        )
+    try:
+        db.add_progress(user_id, manhwa_id, current_chapter, reading_status)
+        return {"message": "Progress added successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.patch("/progress/{manhwa_id}")
-async def add_progress(
-    manhwa_id: int,
+async def update_progress(
     current_chapter: int,
-    status: str,
+    reading_status: str,
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
-    db.add_progress(manhwa_id, current_chapter, status)
+    db.update_progress(current_chapter, reading_status)
 
 
 @router.get("/progress/{user_id}")
