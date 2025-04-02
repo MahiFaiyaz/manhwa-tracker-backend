@@ -1,7 +1,11 @@
 from supabase import create_client
 from typing import List, Optional
 from app.config import SUPABASE_URL, SUPABASE_KEY
-from fastapi import HTTPException
+from fastapi import HTTPException, Header
+import jwt
+
+SUPABASE_JWT_SECRET = "your_supabase_jwt_secret_key"
+REFRESH_TOKEN_SECRET = "your_refresh_token_secret_key"  # Different secret for refresh tokens
 
 
 class ManhwaDatabaseManager:
@@ -215,19 +219,41 @@ class ManhwaDatabaseManager:
 
     def login(self, email: str, password: str):
         """Log in an existing user."""
-        return self.supabase.auth.sign_in_with_password(
+        response =  self.supabase.auth.sign_in_with_password(
             {
                 "email": email,
                 "password": password,
             }
         )
+        session = response.session
+        if session:
+            return {"access_token": session.access_token, "refresh_token": session.refresh_token}
+    
+        return {"error": "Login failed"}
+    
+    def get_user_id(self, access_token):
+        try:
+            response = self.supabase.auth.get_user(access_token)
+            user = response.user
+            if not user:
+                raise HTTPException(status_code=401, detail="User not found")
 
-    def add_progress(self, manhwa_id: int, current_chapter: int, reading_status: str):
+            # Now you can use user_id to fetch user-specific data, like progress
+            return user.id
+        
+        except Exception as e:
+            print(e)
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+    def add_progress(self, access_token, manhwa_id: int, current_chapter: int, reading_status: str):
         """Add or update progress for a specific manhwa."""
+        user_id = self.get_user_id(access_token)
         response = (
             self.supabase.table("user_manhwa_progress")
             .insert(
                 {
+                    "user_id": user_id,
                     "manhwa_id": manhwa_id,
                     "current_chapter": current_chapter,
                     "status": reading_status,
@@ -235,13 +261,13 @@ class ManhwaDatabaseManager:
             )
             .execute()
         )
-        print(response)
         return response.data if response.data else []
 
     def update_progress(
-        self, manhwa_id: int, current_chapter: int, reading_status: str
+        self, access_token, manhwa_id: int, current_chapter: int, reading_status: str
     ):
         """Update progress for a specific manhwa."""
+        user_id = self.get_user_id(access_token)
         response = (
             self.supabase.table("user_manhwa_progress")
             .update(
@@ -255,8 +281,9 @@ class ManhwaDatabaseManager:
         )
         return response.data if response.data else []
 
-    def get_user_progress(self, user_id: str):
+    def get_user_progress(self, access_token):
         """Fetch progress for a specific user."""
+        user_id = self.get_user_id(access_token)
         response = (
             self.supabase.table("user_manhwa_progress")
             .select("*")
@@ -274,3 +301,15 @@ class ManhwaDatabaseManager:
             .execute()
         )
         return response.data if response.data else []
+    
+    def refresh_token(self, refresh_token):
+        try:
+            response = self.supabase.auth.refresh_session(refresh_token)
+            
+            # Extract new tokens
+            new_access_token = response.session.access_token
+            new_refresh_token = response.session.refresh_token  # Sometimes Supabase gives a new one
+            
+            return new_access_token, new_refresh_token
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
