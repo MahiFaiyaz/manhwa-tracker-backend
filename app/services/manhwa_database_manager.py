@@ -2,10 +2,6 @@ from supabase import create_client
 from typing import List, Optional
 from app.config import SUPABASE_URL, SUPABASE_KEY
 from fastapi import HTTPException, Header
-import jwt
-
-SUPABASE_JWT_SECRET = "your_supabase_jwt_secret_key"
-REFRESH_TOKEN_SECRET = "your_refresh_token_secret_key"  # Different secret for refresh tokens
 
 
 class ManhwaDatabaseManager:
