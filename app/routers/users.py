@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Header
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 
 router = APIRouter(tags=["users"])
@@ -12,9 +12,10 @@ def get_db_manager():
 async def sign_up(
     email: str, password: str, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
-    response = db.sign_up(email, password)
-    if "error" in response:
-        raise HTTPException(status_code=400, detail=response["error"]["message"])
+    try:
+        response = db.sign_up(email, password)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return response
 
 
@@ -32,44 +33,45 @@ async def login(
 
 @router.post("/progress")
 async def add_progress(
-    request: Request,
     manhwa_id: int,
     current_chapter: int,
     reading_status: str,
+    auth_token = Header(None), 
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
-    user_id = request.state.user_id
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
-        )
-    try:
-        db.add_progress(user_id, manhwa_id, current_chapter, reading_status)
-        return {"message": "Progress added successfully"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Authorization token is required")
+
+    access_token = auth_token.split("Bearer ")[1]
+    return db.add_progress(access_token, manhwa_id, current_chapter, reading_status)
 
 
 @router.patch("/progress/{manhwa_id}")
 async def update_progress(
     current_chapter: int,
     reading_status: str,
+    auth_token = Header(None), 
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
-    db.update_progress(current_chapter, reading_status)
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Authorization token is required")
+
+    access_token = auth_token.split("Bearer ")[1]
+    return db.update_progress(access_token, current_chapter, reading_status)
 
 
-@router.get("/progress/{user_id}")
-async def get_user_progress(
-    user_id: str, db: ManhwaDatabaseManager = Depends(get_db_manager)
-):
-    db.get_user_progress(user_id)
+@router.get("/progress")
+async def get_user_progress(auth_token = Header(None), db: ManhwaDatabaseManager = Depends(get_db_manager)):
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Authorization token is required")
+
+    # Extract the token from the Authorization header
+    access_token = auth_token.split("Bearer ")[1]
+    return db.get_user_progress(access_token)
 
 
 @router.get("/progress/{manhwa_id}")
 async def get_manhwa_progress(
     manhwa_id: str, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
-    db.get_manhwa_progress(manhwa_id)
+    return db.get_manhwa_progress(manhwa_id)
