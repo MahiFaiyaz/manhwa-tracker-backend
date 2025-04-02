@@ -1,9 +1,12 @@
 import json
 import gspread
 import os
-from app.config import GOOGLE_SHEETS_API_KEY
+from app.core.settings import get_settings
+from app.core.logging import get_logger
+from app.core.exceptions import DatabaseError
 
-SHEET_ID = "1ZluFOVtJCv-cQLXWhmCLNoZFIMLV0eTrqozwyEb1zw8"
+logger = get_logger("google_sheets_manager")
+settings = get_settings()
 
 
 class GoogleSheetsManager:
@@ -11,10 +14,15 @@ class GoogleSheetsManager:
 
     def __new__(cls):
         if cls._instance is None:
+            logger.info("Initializing Google Sheets Manager")
             cls._instance = super().__new__(cls)
-            cls._instance.sheet_id = SHEET_ID
-            cls._instance.gc = gspread.api_key(GOOGLE_SHEETS_API_KEY)
-            cls._instance.sh = cls._instance.gc.open_by_key(SHEET_ID)
+            cls._instance.sheet_id = settings.SHEETS_ID
+            try:
+                cls._instance.gc = gspread.api_key(settings.GOOGLE_SHEETS_API_KEY)
+                cls._instance.sh = cls._instance.gc.open_by_key(settings.SHEETS_ID)
+            except Exception as e:
+                logger.error(f"Failed to initialize Google Sheets connection: {str(e)}")
+                raise DatabaseError(f"Google Sheets connection error: {str(e)}")
         return cls._instance
 
     def parse_column_ranges(self, column_string):
@@ -35,6 +43,7 @@ class GoogleSheetsManager:
     def fetch_data(self, sheet_name, column_string, header_row_index):
         """Fetches manhwa data from Google Sheets."""
         try:
+            logger.info(f"Fetching data from sheet: {sheet_name}")
             worksheet = self.sh.worksheet(sheet_name)
 
             all_data = worksheet.get_values()
@@ -58,37 +67,49 @@ class GoogleSheetsManager:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(dict_data, f, indent=4)  # Pretty print JSON
 
+            logger.info(f"Successfully fetched and saved data from {sheet_name}")
             return dict_data
         except gspread.exceptions.APIError as e:
-            print(f"Google Sheets API error: {e}")
+            logger.error(f"Google Sheets API error: {e}")
+            raise DatabaseError(f"Google Sheets API error: {str(e)}")
         except Exception as e:
-            print(f"Error fetching data from {sheet_name}: {e}")
-        return None
+            logger.error(f"Error fetching data from {sheet_name}: {e}")
+            raise DatabaseError(f"Error fetching data from {sheet_name}: {str(e)}")
 
     def fetch_master_list(self):
+        logger.info("Fetching master list data")
         sheet_name = "Copy of Master List"
         self.fetch_data(sheet_name, "0:9", header_row_index=7)
 
     def fetch_genres(self):
+        logger.info("Fetching genres data")
         sheet_name = "Genres"
         self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_categories(self):
+        logger.info("Fetching categories data")
         sheet_name = "Categories"
         self.fetch_data(sheet_name, "3, 5", header_row_index=1)
 
     def fetch_status(self):
+        logger.info("Fetching status data")
         sheet_name = "Status"
         self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_rating(self):
+        logger.info("Fetching rating data")
         sheet_name = "Rating"
         self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_all(self):
-        self.fetch_genres()
-        self.fetch_categories()
-        self.fetch_status()
-        self.fetch_rating()
-        self.fetch_master_list()
-        print("Fetching data complete.")
+        logger.info("Starting fetch of all data")
+        try:
+            self.fetch_genres()
+            self.fetch_categories()
+            self.fetch_status()
+            self.fetch_rating()
+            self.fetch_master_list()
+            logger.info("All data fetched successfully")
+        except Exception as e:
+            logger.error(f"Error during fetch all operation: {str(e)}")
+            raise DatabaseError(f"Failed to fetch all data: {str(e)}")
