@@ -4,6 +4,7 @@ from app.services.manhwa_database_manager import ManhwaDatabaseManager
 from app.schemas.auth import UserSignUp, UserLogin, TokenResponse
 from app.schemas.manhwa import UserProgressCreate, UserProgress, ManhwaProgressResponse
 from app.core.exceptions import DatabaseError, AuthenticationError, ValidationError
+from fastapi.responses import HTMLResponse
 
 router = APIRouter(tags=["users"])
 
@@ -91,3 +92,21 @@ async def get_manhwa_progress(
         return db.get_manhwa_progress(manhwa_id)
     except Exception as e:
         raise DatabaseError(f"Failed to get manhwa progress: {str(e)}")
+
+
+@router.get("/email-confirmation")
+async def email_confirmation():
+    return HTMLResponse(
+        content="""
+        <html>
+            <head>
+                <title>Email Confirmation</title>
+            </head>
+            <body>
+                <h1>Your email has been confirmed!</h1>
+                <p>Thank you for confirming your email. You can now log in to your account.</p>
+            </body>
+        </html>
+    """,
+        status_code=200,
+    )
