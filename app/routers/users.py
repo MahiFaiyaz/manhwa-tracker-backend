@@ -17,17 +17,18 @@ def get_db_manager():
     return ManhwaDatabaseManager()
 
 
-@router.post("/signup", response_model=TokenResponse)
+@router.post("/signup")
 async def sign_up(
     user: UserSignUp, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
     # Password is already validated by the schema's validator
     try:
         response = db.sign_up(user.email, user.password)
-        return TokenResponse(
-            access_token=response["session"]["access_token"],
-            refresh_token=response["session"]["refresh_token"],
-        )
+        if not response.user.user_metadata:
+            return {"message": f"User with email {user.email} already exists."}
+        return {
+            "message": f"User signed up successfully. Confirmation email sent to {user.email}."
+        }
     except Exception as e:
         raise ValidationError(f"Sign up failed: {str(e)}")
 
