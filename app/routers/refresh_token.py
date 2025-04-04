@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 from app.schemas.auth import RefreshTokenRequest, TokenResponse
+from app.core.exceptions import AuthenticationError
 
 router = APIRouter()
 
@@ -22,4 +23,4 @@ async def refresh_token(
             access_token=new_access_token, refresh_token=new_refresh_token
         )
     except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise AuthenticationError(f"Token refresh failed: {str(e)}")
