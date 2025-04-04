@@ -40,10 +40,7 @@ class ManhwaImageUpdater:
                         logger.debug(f"No image found in API response for {title}")
                 else:
                     logger.debug(f"No data found in API response for {title}")
-            elif response.status_code == 429:
-                logger.warning("Rate limit exceeded, waiting before retry")
-                time.sleep(60)  # Wait for 1 minute before retrying
-            elif response.status_code == 504:
+            elif response.status_code == 500:
                 logger.warning("Gateway timeout, waiting before retry")
                 time.sleep(180)  # Wait for 3 minutes before retrying
             else:
@@ -89,6 +86,12 @@ class ManhwaImageUpdater:
 
                     if retries < max_retries:
                         time.sleep(2)  # Wait before retry
+                    else:  # If all retries failed, set a placeholder image
+                        image_url = "placeholder_url"
+                        logger.warning(
+                            f"Image not found for {manhwa['name']}. Adding placeholder."
+                        )
+                        self.db_manager.update_image_url(manhwa["id"], image_url)
 
                 # Standard wait between requests to avoid rate limiting
                 time.sleep(1)
