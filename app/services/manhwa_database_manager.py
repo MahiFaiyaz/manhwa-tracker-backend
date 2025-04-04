@@ -387,35 +387,6 @@ class ManhwaDatabaseManager:
             logger.error(f"Error adding progress: {str(e)}")
             raise DatabaseError("Failed to add progress")
 
-    def update_progress(
-        self,
-        access_token: str,
-        manhwa_id: int,
-        current_chapter: int,
-        reading_status: str,
-    ) -> List[Dict[str, Any]]:
-        """Update progress for a specific manhwa."""
-        try:
-            user_id = self.get_user_id(access_token)
-            response = (
-                self.supabase.table("user_manhwa_progress")
-                .update(
-                    {
-                        "current_chapter": current_chapter,
-                        "status": reading_status,
-                    }
-                )
-                .eq("user_id", user_id)
-                .eq("manhwa_id", manhwa_id)
-                .execute()
-            )
-            return response.data if response.data else []
-        except AuthenticationError as e:
-            raise e
-        except Exception as e:
-            logger.error(f"Error updating progress: {str(e)}")
-            raise DatabaseError("Failed to update progress")
-
     def get_user_progress(self, access_token: str) -> List[Dict[str, Any]]:
         """Fetch progress for a specific user."""
         try:

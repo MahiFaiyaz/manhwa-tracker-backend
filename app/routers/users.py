@@ -70,29 +70,6 @@ async def add_progress(
         raise DatabaseError(f"Failed to add progress: {str(e)}")
 
 
-@router.patch("/progress/{manhwa_id}", response_model=UserProgress)
-async def update_progress(
-    manhwa_id: int,
-    progress: UserProgressUpdate,
-    auth_token: str = Header(None),
-    db: ManhwaDatabaseManager = Depends(get_db_manager),
-):
-    if not auth_token:
-        raise AuthenticationError("Authorization token is required")
-
-    try:
-        access_token = auth_token.split("Bearer ")[1]
-    except IndexError:
-        raise AuthenticationError("Invalid token format")
-
-    try:
-        return db.update_progress(
-            access_token, manhwa_id, progress.current_chapter, progress.reading_status
-        )
-    except Exception as e:
-        raise DatabaseError(f"Failed to update progress: {str(e)}")
-
-
 @router.get("/progress", response_model=List[UserProgress])
 async def get_user_progress(
     auth_token: str = Header(None), db: ManhwaDatabaseManager = Depends(get_db_manager)
