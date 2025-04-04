@@ -102,59 +102,32 @@ class ManhwaImageUpdater:
         """Fetch and update images for all manhwas."""
         logger.info("Starting to fetch all images")
         try:
-            # Get all manhwas with pagination to handle large data sets
-            page = 1
-            per_page = 100
-            processed = 0
+            manhwas_response = self.db_manager.get_manhwas()
+            manhwas = manhwas_response.get("data", [])
 
-            while True:
-                logger.info(f"Fetching manhwas page {page}")
-                manhwas_response = self.db_manager.get_manhwas(
-                    page=page, per_page=per_page
-                )
-                manhwas = manhwas_response.get("data", [])
-
-                if not manhwas:
-                    break
-
-                total_manhwas = manhwas_response.get("pagination", {}).get("total", 0)
-                logger.info(
-                    f"Processing page {page} with {len(manhwas)} manhwas (Total: {total_manhwas})"
-                )
-
-                for index, manhwa in enumerate(manhwas):
-                    processed += 1
-                    logger.info(
-                        f"Processing {processed}/{total_manhwas}: {manhwa['name']}"
-                    )
-
-                    # Try with retries
-                    retries = 0
-                    while retries < max_retries:
-                        image_url = self._fetch_image(manhwa["name"])
-                        if image_url:
-                            try:
-                                self.db_manager.update_image_url(
-                                    manhwa["id"], image_url
-                                )
-                                logger.info(f"Updated image for {manhwa['name']}")
-                                break
-                            except Exception as e:
-                                logger.error(
-                                    f"Failed to update image URL in database for {manhwa['name']}: {str(e)}"
-                                )
-                                retries += 1
-                        else:
-                            logger.warning(f"Image not found for {manhwa['name']}")
+            for index, manhwa in enumerate(manhwas):
+                retries = 0
+                while retries < max_retries:
+                    image_url = self._fetch_image(manhwa["name"])
+                    if image_url:
+                        try:
+                            self.db_manager.update_image_url(manhwa["id"], image_url)
+                            logger.info(f"Updated image for {manhwa['name']}")
+                            break
+                        except Exception as e:
+                            logger.error(
+                                f"Failed to update image URL in database for {manhwa['name']}: {str(e)}"
+                            )
                             retries += 1
+                    else:
+                        logger.warning(f"Image not found for {manhwa['name']}")
+                        retries += 1
 
-                        if retries < max_retries:
-                            time.sleep(2)  # Wait before retry
+                    if retries < max_retries:
+                        time.sleep(2)  # Wait before retry
 
-                    # Standard wait between requests to avoid rate limiting
-                    time.sleep(1)
-
-                page += 1
+                # Standard wait between requests to avoid rate limiting
+                time.sleep(1)
 
             logger.info("Completed fetching all images")
         except Exception as e:
