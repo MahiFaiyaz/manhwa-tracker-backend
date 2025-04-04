@@ -355,7 +355,7 @@ class ManhwaDatabaseManager:
             # Check if progress already exists
             existing = (
                 self.supabase.table("user_manhwa_progress")
-                .select("id")
+                .select("*")
                 .eq("user_id", user_id)
                 .eq("manhwa_id", manhwa_id)
                 .execute()
@@ -422,7 +422,7 @@ class ManhwaDatabaseManager:
             user_id = self.get_user_id(access_token)
             response = (
                 self.supabase.table("user_manhwa_progress")
-                .select("*, manhwas(name, image_url)")
+                .select("*")
                 .eq("user_id", user_id)
                 .execute()
             )
