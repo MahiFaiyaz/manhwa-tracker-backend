@@ -21,6 +21,7 @@ def get_db_manager():
 async def sign_up(
     user: UserSignUp, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
+    # Password is already validated by the schema's validator
     try:
         response = db.sign_up(user.email, user.password)
         return TokenResponse(
@@ -35,12 +36,15 @@ async def sign_up(
 async def login(user: UserLogin, db: ManhwaDatabaseManager = Depends(get_db_manager)):
     try:
         response = db.login(user.email, user.password)
-        return response
+        return TokenResponse(
+            access_token=response["access_token"],
+            refresh_token=response["refresh_token"],
+        )
     except Exception as e:
         raise AuthenticationError(f"Login failed: {str(e)}")
 
 
-@router.post("/progress")
+@router.post("/progress", response_model=UserProgress)
 async def add_progress(
     progress: UserProgressCreate,
     auth_token: str = Header(None),
@@ -65,7 +69,7 @@ async def add_progress(
         raise DatabaseError(f"Failed to add progress: {str(e)}")
 
 
-@router.patch("/progress/{manhwa_id}")
+@router.patch("/progress/{manhwa_id}", response_model=UserProgress)
 async def update_progress(
     manhwa_id: int,
     progress: UserProgressUpdate,
@@ -108,7 +112,7 @@ async def get_user_progress(
 
 @router.get("/progress/{manhwa_id}", response_model=List[UserProgress])
 async def get_manhwa_progress(
-    manhwa_id: str, db: ManhwaDatabaseManager = Depends(get_db_manager)
+    manhwa_id: int, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
     try:
         return db.get_manhwa_progress(manhwa_id)
