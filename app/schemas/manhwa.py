@@ -76,10 +76,7 @@ class UserProgressUpdate(BaseModel):
 class UserProgress(BaseModel):
     """Schema for user progress."""
 
-    id: int
-    manhwa_id: int
     user_id: str
+    manhwa_id: int
     current_chapter: int
     status: ReadingStatus
-    created_at: str
-    updated_at: str
