@@ -66,13 +66,6 @@ class UserProgressCreate(BaseModel):
     reading_status: ReadingStatus
 
 
-class UserProgressUpdate(BaseModel):
-    """Schema for updating user progress."""
-
-    current_chapter: int
-    reading_status: ReadingStatus
-
-
 class UserProgress(BaseModel):
     """Schema for user progress."""
 
@@ -93,3 +86,13 @@ class ManhwaFilter(BaseModel):
     max_year_released: Optional[int] = None
     status: Optional[List[str]] = None
     ratings: Optional[List[str]] = None
+
+
+class ManhwaProgressResponse(BaseModel):
+    """Response model for manhwa progress statistics."""
+
+    planning: int = 0
+    reading: int = 0
+    completed: int = 0
+    dropped: int = 0
+    on_hold: int = 0
