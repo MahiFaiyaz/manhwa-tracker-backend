@@ -62,15 +62,9 @@ def get_manhwas(
     max_year_released: Optional[int] = None,
     status: Optional[List[str]] = Query(None),
     ratings: Optional[List[str]] = Query(None),
-    page: int = 1,
-    per_page: int = 20,
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
     # Input validation
-    if page < 1:
-        raise ValidationError("Page number must be greater than 0")
-    if per_page < 1 or per_page > 100:
-        raise ValidationError("Items per page must be between 1 and 100")
     if min_chapters is not None and min_chapters < 0:
         raise ValidationError("Minimum chapters cannot be negative")
     if max_chapters is not None and max_chapters < 0:
@@ -96,19 +90,7 @@ def get_manhwas(
             max_year_released=max_year_released,
             status=status,
             ratings=ratings,
-            page=page,
-            per_page=per_page,
         )
-
-        # Ensure the result includes needed pagination metadata
-        if not isinstance(result, dict) or "data" not in result:
-            # Convert to proper format if database manager doesn't do it
-            result = {
-                "data": result,
-                "page": page,
-                "per_page": per_page,
-                "total": len(result) if result else 0,
-            }
 
         return result
     except ValidationError as e:

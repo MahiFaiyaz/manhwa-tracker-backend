@@ -141,8 +141,6 @@ class ManhwaDatabaseManager:
         max_year_released: Optional[int] = None,
         status: Optional[List[str]] = None,
         ratings: Optional[List[str]] = None,
-        page: int = 1,
-        per_page: int = 20,
     ) -> Dict[str, Any]:
         """Fetch manhwas based on filters with pagination."""
         try:
@@ -177,11 +175,6 @@ class ManhwaDatabaseManager:
             if categories:
                 query = query.in_("id", self._get_manhwa_ids_by_categories(categories))
 
-            # Apply pagination
-            start = (page - 1) * per_page
-            end = start + per_page - 1
-            query = query.range(start, end)
-
             # Add alphabetical sorting by name
             query = query.order("name")  # Sort by name alphabetically
 
@@ -206,15 +199,7 @@ class ManhwaDatabaseManager:
                 manhwa.pop("created_at", None)
 
             # Return with pagination info
-            return {
-                "data": manhwas,
-                "pagination": {
-                    "page": page,
-                    "per_page": per_page,
-                    "total": total_count,
-                    "pages": (total_count + per_page - 1) // per_page,
-                },
-            }
+            return {"data": manhwas, "total": total_count}
 
         except ValidationError as e:
             raise e
