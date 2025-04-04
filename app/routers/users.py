@@ -45,7 +45,7 @@ async def login(user: UserLogin, db: ManhwaDatabaseManager = Depends(get_db_mana
         raise AuthenticationError(f"Login failed: {str(e)}")
 
 
-@router.post("/progress", response_model=UserProgress)
+@router.post("/progress", response_model=List[UserProgress])
 async def add_progress(
     progress: UserProgressCreate,
     auth_token: str = Header(None),
