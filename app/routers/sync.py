@@ -89,7 +89,7 @@ async def sync_all_images(
             # Then sync the data
             syncer.fetch_all_images()
 
-            logger.info("Missing image sync completed successfully")
+            logger.info("All image sync completed successfully")
         except DatabaseError as e:
             logger.error(f"Database sync error: {str(e)}")
         except Exception as e:
