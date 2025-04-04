@@ -111,18 +111,7 @@ def get_manhwas(
             }
 
         return result
-    except Exception as e:
-        raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
-
-
-@router.get("/manhwa/{manhwa_id}", response_model=ManhwaBase)
-def get_manhwa(manhwa_id: int, db: ManhwaDatabaseManager = Depends(get_db_manager)):
-    try:
-        result = db.get_manhwa(manhwa_id)
-        if not result:
-            raise ValidationError(f"Manhwa with ID {manhwa_id} not found")
-        return result
     except ValidationError as e:
         raise e
     except Exception as e:
-        raise DatabaseError(f"Failed to retrieve manhwa: {str(e)}")
+        raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
