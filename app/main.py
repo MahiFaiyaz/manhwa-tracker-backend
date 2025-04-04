@@ -9,6 +9,7 @@ from app.core.settings import get_settings
 from app.core.logging import get_logger
 from app.core.exceptions import setup_exception_handlers
 from app.middleware.logging_middleware import LoggingMiddleware
+from contextlib import asynccontextmanager
 
 settings = get_settings()
 logger = get_logger("app")
@@ -17,10 +18,19 @@ limiter = Limiter(
     key_func=get_remote_address, default_limits=[settings.DEFAULT_RATE_LIMIT]
 )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Application starting up")
+    yield
+    logger.info("Application shutting down")
+
+
 app = FastAPI(
     title=settings.API_TITLE,
     description=settings.API_DESCRIPTION,
     version=settings.API_VERSION,
+    lifespan=lifespan,
 )
 
 # Set up exception handlers
@@ -47,13 +57,3 @@ app.include_router(sync.router)
 app.include_router(health.router)
 app.include_router(users.router)
 app.include_router(refresh_token.router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Application starting up")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Application shutting down")
