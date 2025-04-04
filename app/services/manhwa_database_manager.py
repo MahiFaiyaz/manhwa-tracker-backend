@@ -1,6 +1,4 @@
 from typing import List, Optional, Dict, Any, Tuple
-from fastapi import HTTPException, status
-from supabase import Client
 from functools import lru_cache
 from app.core.database import get_db
 from app.core.logging import get_logger
@@ -183,6 +181,9 @@ class ManhwaDatabaseManager:
             start = (page - 1) * per_page
             end = start + per_page - 1
             query = query.range(start, end)
+
+            # Add alphabetical sorting by name
+            query = query.order("name")  # Sort by name alphabetically
 
             # Execute query
             response = query.execute()
