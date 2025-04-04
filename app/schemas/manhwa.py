@@ -1,6 +1,6 @@
 from typing import List, Optional
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class ReadingStatus(str, Enum):
@@ -80,3 +80,16 @@ class UserProgress(BaseModel):
     manhwa_id: int
     current_chapter: int
     status: ReadingStatus
+
+
+class ManhwaFilter(BaseModel):
+    """Schema for filtering manhwas."""
+
+    genres: Optional[List[str]] = None
+    categories: Optional[List[str]] = None
+    min_chapters: Optional[int] = None
+    max_chapters: Optional[int] = None
+    min_year_released: Optional[int] = None
+    max_year_released: Optional[int] = None
+    status: Optional[List[str]] = None
+    ratings: Optional[List[str]] = None

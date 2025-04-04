@@ -6,7 +6,7 @@ from app.schemas.manhwa import (
     CategoryBase,
     RatingBase,
     StatusBase,
-    ManhwaBase,
+    ManhwaFilter,
 )
 from app.core.exceptions import DatabaseError, ValidationError
 
@@ -49,30 +49,23 @@ def get_statuses(db: ManhwaDatabaseManager = Depends(get_db_manager)):
         raise DatabaseError(f"Failed to retrieve statuses: {str(e)}")
 
 
-@router.get(
+@router.post(
     "/manhwas",
     response_model=Dict[str, Any],  # For pagination metadata
 )
 def get_manhwas(
-    genres: Optional[List[str]] = Query(None),
-    categories: Optional[List[str]] = Query(None),
-    min_chapters: Optional[int] = None,
-    max_chapters: Optional[int] = None,
-    min_year_released: Optional[int] = None,
-    max_year_released: Optional[int] = None,
-    status: Optional[List[str]] = Query(None),
-    ratings: Optional[List[str]] = Query(None),
+    filter: ManhwaFilter,
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
     # Input validation
-    if min_chapters is not None and min_chapters < 0:
+    if filter.min_chapters is not None and filter.min_chapters < 0:
         raise ValidationError("Minimum chapters cannot be negative")
-    if max_chapters is not None and max_chapters < 0:
+    if filter.max_chapters is not None and filter.max_chapters < 0:
         raise ValidationError("Maximum chapters cannot be negative")
     if (
-        min_year_released is not None
-        and max_year_released is not None
-        and min_year_released > max_year_released
+        filter.min_year_released is not None
+        and filter.max_year_released is not None
+        and filter.min_year_released > filter.max_year_released
     ):
         raise ValidationError(
             "Minimum year released cannot be greater than maximum year released"
@@ -82,14 +75,14 @@ def get_manhwas(
         # This should return a dict with data and pagination info
         # The 'data' key should contain a list of ManhwaBase objects
         result = db.get_manhwas(
-            genres=genres,
-            categories=categories,
-            min_chapters=min_chapters,
-            max_chapters=max_chapters,
-            min_year_released=min_year_released,
-            max_year_released=max_year_released,
-            status=status,
-            ratings=ratings,
+            genres=filter.genres,
+            categories=filter.categories,
+            min_chapters=filter.min_chapters,
+            max_chapters=filter.max_chapters,
+            min_year_released=filter.min_year_released,
+            max_year_released=filter.max_year_released,
+            status=filter.status,
+            ratings=filter.ratings,
         )
 
         return result
