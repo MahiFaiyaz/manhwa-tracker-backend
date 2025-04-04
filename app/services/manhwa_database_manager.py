@@ -3,6 +3,7 @@ from functools import lru_cache
 from app.core.database import get_db
 from app.core.logging import get_logger
 from app.core.exceptions import DatabaseError, AuthenticationError, ValidationError
+from app.schemas.manhwa import ReadingStatus
 
 logger = get_logger("manhwa_database_manager")
 
@@ -404,16 +405,21 @@ class ManhwaDatabaseManager:
             logger.error(f"Error getting user progress: {str(e)}")
             raise DatabaseError("Failed to get user progress")
 
-    def get_manhwa_progress(self, manhwa_id: str) -> List[Dict[str, Any]]:
+    def get_manhwa_progress(self, manhwa_id: str) -> Dict[str, Any]:
         """Fetch progress for a specific manhwa."""
         try:
-            response = (
-                self.supabase.table("user_manhwa_progress")
-                .select("*")
-                .eq("manhwa_id", manhwa_id)
-                .execute()
-            )
-            return response.data if response.data else []
+            # Default counts for all statuses
+            status_counts = {status.value: 0 for status in ReadingStatus}
+
+            response = self.supabase.rpc(
+                "get_manhwa_progress", {"manhwa_id_param": manhwa_id}
+            ).execute()
+
+            if response.data:
+                for entry in response.data:
+                    status_counts[entry["reading_status"]] = entry["count"]
+
+            return status_counts
         except Exception as e:
             logger.error(f"Error getting manhwa progress: {str(e)}")
             raise DatabaseError("Failed to get manhwa progress")
