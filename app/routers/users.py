@@ -2,12 +2,7 @@ from fastapi import APIRouter, Depends, Header
 from typing import List
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 from app.schemas.auth import UserSignUp, UserLogin, TokenResponse
-from app.schemas.manhwa import (
-    UserProgressCreate,
-    UserProgressUpdate,
-    UserProgress,
-    ReadingStatus,
-)
+from app.schemas.manhwa import UserProgressCreate, UserProgress, ManhwaProgressResponse
 from app.core.exceptions import DatabaseError, AuthenticationError, ValidationError
 
 router = APIRouter(tags=["users"])
@@ -88,7 +83,7 @@ async def get_user_progress(
         raise DatabaseError(f"Failed to get user progress: {str(e)}")
 
 
-@router.get("/progress/{manhwa_id}", response_model=List[UserProgress])
+@router.get("/progress/{manhwa_id}", response_model=ManhwaProgressResponse)
 async def get_manhwa_progress(
     manhwa_id: int, db: ManhwaDatabaseManager = Depends(get_db_manager)
 ):
