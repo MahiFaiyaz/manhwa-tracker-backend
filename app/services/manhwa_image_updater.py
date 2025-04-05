@@ -105,8 +105,7 @@ class ManhwaImageUpdater:
         """Fetch and update images for all manhwas."""
         logger.info("Starting to fetch all images")
         try:
-            manhwas_response = self.db_manager.get_manhwas()
-            manhwas = manhwas_response.get("data", [])
+            manhwas = self.db_manager.get_manhwas()
 
             for index, manhwa in enumerate(manhwas):
                 retries = 0

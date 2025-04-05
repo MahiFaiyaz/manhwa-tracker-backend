@@ -52,24 +52,15 @@ class ManhwaBase(BaseModel):
     chapter_min: int = 0
     chapter_max: Optional[int] = None
     image_url: Optional[str] = None
-    status: StatusBase
-    rating: RatingBase
+    status: str
+    rating: str
     genres: List[str]
     categories: List[str]
-
-
-class UserProgressCreate(BaseModel):
-    """Schema for creating user progress."""
-
-    manhwa_id: int
-    current_chapter: int
-    reading_status: ReadingStatus
 
 
 class UserProgress(BaseModel):
     """Schema for user progress."""
 
-    user_id: str
     manhwa_id: int
     current_chapter: int
     status: ReadingStatus
@@ -96,3 +87,11 @@ class ManhwaProgressResponse(BaseModel):
     completed: int = 0
     dropped: int = 0
     on_hold: int = 0
+
+
+class ManhwaWithProgress(BaseModel):
+    """Schema for manhwa with user progress."""
+
+    current_chapter: int
+    status: ReadingStatus
+    manhwa: ManhwaBase

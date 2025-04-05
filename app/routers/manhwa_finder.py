@@ -7,6 +7,7 @@ from app.schemas.manhwa import (
     RatingBase,
     StatusBase,
     ManhwaFilter,
+    ManhwaBase,
 )
 from app.core.exceptions import DatabaseError, ValidationError
 from app.core.dependencies import get_db_manager
@@ -48,7 +49,7 @@ def get_statuses(db: ManhwaDatabaseManager = Depends(get_db_manager)):
 
 @router.post(
     "/manhwas",
-    response_model=Dict[str, Any],  # For pagination metadata
+    response_model=List[ManhwaBase],  # For pagination metadata
 )
 def get_manhwas(
     filter: ManhwaFilter,
