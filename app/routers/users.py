@@ -1,16 +1,13 @@
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends
 from typing import List
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 from app.schemas.auth import UserSignUp, UserLogin, TokenResponse
 from app.schemas.manhwa import UserProgressCreate, UserProgress, ManhwaProgressResponse
 from app.core.exceptions import DatabaseError, AuthenticationError, ValidationError
+from app.core.dependencies import get_bearer_token, get_db_manager
 from fastapi.responses import HTMLResponse
 
 router = APIRouter(tags=["users"])
-
-
-def get_db_manager():
-    return ManhwaDatabaseManager()
 
 
 @router.post("/signup")
@@ -44,17 +41,9 @@ async def login(user: UserLogin, db: ManhwaDatabaseManager = Depends(get_db_mana
 @router.post("/progress", response_model=List[UserProgress])
 async def add_progress(
     progress: UserProgressCreate,
-    auth_token: str = Header(None),
+    access_token: str = Depends(get_bearer_token(required=True)),
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
-    if not auth_token:
-        raise AuthenticationError("Authorization token is required")
-
-    try:
-        access_token = auth_token.split("Bearer ")[1]
-    except IndexError:
-        raise AuthenticationError("Invalid token format")
-
     try:
         return db.add_progress(
             access_token,
@@ -68,16 +57,9 @@ async def add_progress(
 
 @router.get("/progress", response_model=List[UserProgress])
 async def get_user_progress(
-    auth_token: str = Header(None), db: ManhwaDatabaseManager = Depends(get_db_manager)
+    access_token: str = Depends(get_bearer_token(required=True)),
+    db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
-    if not auth_token:
-        raise AuthenticationError("Authorization token is required")
-
-    try:
-        access_token = auth_token.split("Bearer ")[1]
-    except IndexError:
-        raise AuthenticationError("Invalid token format")
-
     try:
         return db.get_user_progress(access_token)
     except Exception as e:

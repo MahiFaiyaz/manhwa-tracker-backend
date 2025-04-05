@@ -9,12 +9,9 @@ from app.schemas.manhwa import (
     ManhwaFilter,
 )
 from app.core.exceptions import DatabaseError, ValidationError
+from app.core.dependencies import get_db_manager
 
 router = APIRouter(tags=["Manhwa-Finder"])
-
-
-def get_db_manager():
-    return ManhwaDatabaseManager()
 
 
 @router.get("/genres", response_model=List[GenreBase])

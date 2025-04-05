@@ -2,12 +2,9 @@ from fastapi import APIRouter, Depends
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 from app.schemas.auth import RefreshTokenRequest, TokenResponse
 from app.core.exceptions import AuthenticationError
+from app.core.dependencies import get_db_manager
 
 router = APIRouter()
-
-
-def get_db_manager():
-    return ManhwaDatabaseManager()
 
 
 @router.post("/refresh_token", response_model=TokenResponse, tags=["Token"])
