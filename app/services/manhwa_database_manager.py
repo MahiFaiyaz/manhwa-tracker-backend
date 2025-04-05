@@ -299,7 +299,6 @@ class ManhwaDatabaseManager:
                 {
                     "email": email,
                     "password": password,
-                    "redirect_to": "https://manhwa-tracker-backend.onrender.com/email-confirmation",
                 }
             )
             if not response:
