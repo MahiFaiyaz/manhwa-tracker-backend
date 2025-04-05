@@ -16,6 +16,25 @@ class ManhwaDatabaseManager:
         with get_db() as supabase:
             self.supabase = supabase
 
+    def process_manhwa_result(self, manhwas) -> List[Dict[str, Any]]:
+        # Process results
+        for manhwa in manhwas:
+            manhwa["genres"] = [
+                g["genres"]["name"] for g in manhwa.get("manhwa_genres", [])
+            ]
+            manhwa["categories"] = [
+                c["categories"]["name"] for c in manhwa.get("manhwa_categories", [])
+            ]
+            manhwa["rating"] = manhwa.get("rating", {}).get("name")
+            manhwa["status"] = manhwa.get("status", {}).get("name")
+            # Remove redundant nested lists
+            manhwa.pop("manhwa_genres", None)
+            manhwa.pop("manhwa_categories", None)
+            manhwa.pop("status_id", None)
+            manhwa.pop("rating_id", None)
+            manhwa.pop("created_at", None)
+        return manhwas
+
     @lru_cache(maxsize=128)
     def get_genres(self) -> List[Dict[str, Any]]:
         """Fetch all genres with name and description."""
@@ -142,7 +161,7 @@ class ManhwaDatabaseManager:
         max_year_released: Optional[int] = None,
         status: Optional[List[str]] = None,
         ratings: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+    ) -> List[Dict[str, Any]]:
         """Fetch manhwas based on filters with pagination."""
         try:
             # Validate filters
@@ -182,25 +201,8 @@ class ManhwaDatabaseManager:
             # Execute query
             response = query.execute()
             manhwas = response.data if response.data else []
-            total_count = response.count if hasattr(response, "count") else 0
 
-            # Process results
-            for manhwa in manhwas:
-                manhwa["genres"] = [
-                    g["genres"]["name"] for g in manhwa.get("manhwa_genres", [])
-                ]
-                manhwa["categories"] = [
-                    c["categories"]["name"] for c in manhwa.get("manhwa_categories", [])
-                ]
-                # Remove redundant nested lists
-                manhwa.pop("manhwa_genres", None)
-                manhwa.pop("manhwa_categories", None)
-                manhwa.pop("status_id", None)
-                manhwa.pop("rating_id", None)
-                manhwa.pop("created_at", None)
-
-            # Return with pagination info
-            return {"data": manhwas, "total": total_count}
+            return self.process_manhwa_result(manhwas)
 
         except ValidationError as e:
             raise e
@@ -347,7 +349,7 @@ class ManhwaDatabaseManager:
         access_token: str,
         manhwa_id: int,
         current_chapter: int,
-        reading_status: str,
+        status: str,
     ) -> List[Dict[str, Any]]:
         """Add progress for a specific manhwa."""
         try:
@@ -365,7 +367,7 @@ class ManhwaDatabaseManager:
             if existing.data:
                 # Update existing progress
                 return self.update_progress(
-                    access_token, manhwa_id, current_chapter, reading_status
+                    access_token, manhwa_id, current_chapter, status
                 )
 
             # Insert new progress
@@ -376,7 +378,7 @@ class ManhwaDatabaseManager:
                         "user_id": user_id,
                         "manhwa_id": manhwa_id,
                         "current_chapter": current_chapter,
-                        "status": reading_status,
+                        "status": status,
                     }
                 )
                 .execute()
@@ -394,11 +396,30 @@ class ManhwaDatabaseManager:
             user_id = self.get_user_id(access_token)
             response = (
                 self.supabase.table("user_manhwa_progress")
-                .select("*")
+                .select(
+                    """
+                    current_chapter,
+                    status,
+                    manhwas!user_manhwa_progress_manhwa_id_fkey (
+                        *,
+                        status(name),
+                        rating(name),
+                        manhwa_genres!inner(genre_id, genres(name)),
+                        manhwa_categories!inner(category_id, categories(name))
+                    )
+                    """
+                )
                 .eq("user_id", user_id)
                 .execute()
             )
-            return response.data if response.data else []
+
+            results = []
+            for item in response.data or []:
+                manhwa = [item.pop("manhwas", {})]
+                processed_manhwa = self.process_manhwa_result(manhwa)
+                results.append({**item, "manhwa": processed_manhwa[0]})
+            return results
+
         except AuthenticationError as e:
             raise e
         except Exception as e:
@@ -417,7 +438,7 @@ class ManhwaDatabaseManager:
 
             if response.data:
                 for entry in response.data:
-                    status_counts[entry["reading_status"]] = entry["count"]
+                    status_counts[entry["status"]] = entry["count"]
 
             return status_counts
         except Exception as e:
