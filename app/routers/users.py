@@ -1,19 +1,17 @@
 from fastapi import APIRouter, Depends
 from typing import List
-from app.services.manhwa_database_manager import ManhwaDatabaseManager
+from app.services.manhwa_auth_manager import UserAuthManager
 from app.schemas.auth import UserSignUp, UserLogin, TokenResponse
-from app.schemas.manhwa import UserProgress, ManhwaProgressResponse, ManhwaWithProgress
+from app.schemas.manhwa import UserProgress, ManhwaWithProgress
 from app.core.exceptions import DatabaseError, AuthenticationError, ValidationError
-from app.core.dependencies import get_bearer_token, get_db_manager
+from app.core.dependencies import get_bearer_token, get_auth_manager
 from fastapi.responses import HTMLResponse
 
 router = APIRouter(tags=["users"])
 
 
 @router.post("/signup")
-async def sign_up(
-    user: UserSignUp, db: ManhwaDatabaseManager = Depends(get_db_manager)
-):
+async def sign_up(user: UserSignUp, db: UserAuthManager = Depends(get_auth_manager)):
     # Password is already validated by the schema's validator
     try:
         response = db.sign_up(user.email, user.password)
@@ -27,7 +25,7 @@ async def sign_up(
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user: UserLogin, db: ManhwaDatabaseManager = Depends(get_db_manager)):
+async def login(user: UserLogin, db: UserAuthManager = Depends(get_auth_manager)):
     try:
         response = db.login(user.email, user.password)
         return TokenResponse(
@@ -42,7 +40,7 @@ async def login(user: UserLogin, db: ManhwaDatabaseManager = Depends(get_db_mana
 async def add_progress(
     progress: UserProgress,
     access_token: str = Depends(get_bearer_token(required=True)),
-    db: ManhwaDatabaseManager = Depends(get_db_manager),
+    db: UserAuthManager = Depends(get_auth_manager),
 ):
     try:
         return db.add_progress(
@@ -58,22 +56,12 @@ async def add_progress(
 @router.get("/progress", response_model=List[ManhwaWithProgress])
 async def get_user_progress(
     access_token: str = Depends(get_bearer_token(required=True)),
-    db: ManhwaDatabaseManager = Depends(get_db_manager),
+    db: UserAuthManager = Depends(get_auth_manager),
 ):
     try:
         return db.get_user_progress(access_token)
     except Exception as e:
         raise DatabaseError(f"Failed to get user progress: {str(e)}")
-
-
-@router.get("/progress/{manhwa_id}", response_model=ManhwaProgressResponse)
-async def get_manhwa_progress(
-    manhwa_id: int, db: ManhwaDatabaseManager = Depends(get_db_manager)
-):
-    try:
-        return db.get_manhwa_progress(manhwa_id)
-    except Exception as e:
-        raise DatabaseError(f"Failed to get manhwa progress: {str(e)}")
 
 
 @router.get("/email-confirmation")
