@@ -2,6 +2,7 @@ from fastapi import Header
 from typing import Optional
 from app.core.exceptions import AuthenticationError
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
+from app.services.manhwa_auth_manager import UserAuthManager
 
 
 def get_bearer_token(required: bool = True):
@@ -23,3 +24,7 @@ def get_bearer_token(required: bool = True):
 
 def get_db_manager():
     return ManhwaDatabaseManager()
+
+
+def get_auth_manager():
+    return UserAuthManager()
