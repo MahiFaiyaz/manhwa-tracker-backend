@@ -11,6 +11,7 @@ class ReadingStatus(str, Enum):
     COMPLETED = "completed"
     DROPPED = "dropped"
     ON_HOLD = "on_hold"
+    NOT_READ = "not_read"
 
 
 class GenreBase(BaseModel):
@@ -63,7 +64,7 @@ class UserProgress(BaseModel):
 
     manhwa_id: int
     current_chapter: int
-    status: ReadingStatus
+    reading_status: ReadingStatus
 
 
 class ManhwaFilter(BaseModel):
@@ -87,11 +88,12 @@ class ManhwaProgressResponse(BaseModel):
     completed: int = 0
     dropped: int = 0
     on_hold: int = 0
+    not_read: int = 0
 
 
 class ManhwaWithProgress(BaseModel):
     """Schema for manhwa with user progress."""
 
     current_chapter: int
-    status: ReadingStatus
+    reading_status: ReadingStatus
     manhwa: ManhwaBase
