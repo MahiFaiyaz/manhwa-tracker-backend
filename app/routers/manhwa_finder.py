@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, Query
-from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends
+from typing import List
 from app.services.manhwa_database_manager import ManhwaDatabaseManager
 from app.schemas.manhwa import (
     GenreBase,
@@ -8,6 +8,7 @@ from app.schemas.manhwa import (
     StatusBase,
     ManhwaFilter,
     ManhwaWithProgress,
+    ManhwaProgressResponse,
 )
 from app.core.exceptions import DatabaseError, ValidationError
 from app.core.dependencies import get_db_manager, get_bearer_token
@@ -88,3 +89,13 @@ def get_manhwas(
         raise e
     except Exception as e:
         raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
+
+
+@router.get("/progress/{manhwa_id}", response_model=ManhwaProgressResponse)
+async def get_manhwa_progress(
+    manhwa_id: int, db: ManhwaDatabaseManager = Depends(get_db_manager)
+):
+    try:
+        return db.get_manhwa_progress(manhwa_id)
+    except Exception as e:
+        raise DatabaseError(f"Failed to get manhwa progress: {str(e)}")
