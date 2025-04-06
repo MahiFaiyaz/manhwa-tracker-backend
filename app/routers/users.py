@@ -49,7 +49,7 @@ async def add_progress(
             access_token,
             progress.manhwa_id,
             progress.current_chapter,
-            progress.status,
+            progress.reading_status,
         )
     except Exception as e:
         raise DatabaseError(f"Failed to add progress: {str(e)}")
