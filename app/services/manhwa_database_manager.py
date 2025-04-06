@@ -17,23 +17,56 @@ class ManhwaDatabaseManager:
             self.supabase = supabase
 
     def process_manhwa_result(self, manhwas) -> List[Dict[str, Any]]:
-        # Process results
-        for manhwa in manhwas:
-            manhwa["genres"] = [
-                g["genres"]["name"] for g in manhwa.get("manhwa_genres", [])
+        processed = []
+
+        for item in manhwas:
+            # Check if this is the progress-wrapped format (case 2)
+            if "manhwas" in item:
+                manhwa_data = item["manhwas"]
+                current_chapter = item.get("current_chapter", 0)
+                reading_status = item.get("reading_status", "not_read")
+            else:
+                manhwa_data = item
+                # Try to get progress info from user_manhwa_progress if present
+                progress = manhwa_data.get("user_manhwa_progress", [])
+                if progress and isinstance(progress, list):
+                    current_chapter = progress[0].get("current_chapter", 0)
+                    reading_status = progress[0].get("reading_status", "not_read")
+                else:
+                    current_chapter = 0
+                    reading_status = "not_read"
+
+            # Build manhwa sub-object (normalized)
+            manhwa_data["genres"] = [
+                g["genres"]["name"] for g in manhwa_data.get("manhwa_genres", [])
             ]
-            manhwa["categories"] = [
-                c["categories"]["name"] for c in manhwa.get("manhwa_categories", [])
+            manhwa_data["categories"] = [
+                c["categories"]["name"]
+                for c in manhwa_data.get("manhwa_categories", [])
             ]
-            manhwa["rating"] = manhwa.get("rating", {}).get("name")
-            manhwa["status"] = manhwa.get("status", {}).get("name")
-            # Remove redundant nested lists
-            manhwa.pop("manhwa_genres", None)
-            manhwa.pop("manhwa_categories", None)
-            manhwa.pop("status_id", None)
-            manhwa.pop("rating_id", None)
-            manhwa.pop("created_at", None)
-        return manhwas
+            manhwa_data["rating"] = manhwa_data.get("rating", {}).get("name")
+            manhwa_data["status"] = manhwa_data.get("status", {}).get("name")
+
+            # Clean up unnecessary fields
+            for key in [
+                "manhwa_genres",
+                "manhwa_categories",
+                "status_id",
+                "rating_id",
+                "created_at",
+                "user_manhwa_progress",
+            ]:
+                manhwa_data.pop(key, None)
+
+            # Append in ManhwaWithProgress format
+            processed.append(
+                {
+                    "current_chapter": current_chapter,
+                    "reading_status": reading_status,
+                    "manhwa": manhwa_data,
+                }
+            )
+        return processed
 
     @lru_cache(maxsize=128)
     def get_genres(self) -> List[Dict[str, Any]]:
@@ -174,7 +207,6 @@ class ManhwaDatabaseManager:
                 "rating(name)",
                 "manhwa_genres!inner(genre_id, genres(name))",
                 "manhwa_categories!inner(category_id, categories(name))",
-                count="exact",  # Get total count for pagination
             )
 
             # Apply filters
@@ -201,8 +233,75 @@ class ManhwaDatabaseManager:
             # Execute query
             response = query.execute()
             manhwas = response.data if response.data else []
+            processed_manhwas = self.process_manhwa_result(manhwas)
+            return processed_manhwas
 
-            return self.process_manhwa_result(manhwas)
+        except ValidationError as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error fetching manhwas: {str(e)}")
+            raise DatabaseError("Failed to fetch manhwas")
+
+    def get_manhwas_with_token(
+        self,
+        access_token: str,
+        genres: Optional[List[str]] = None,
+        categories: Optional[List[str]] = None,
+        min_chapters: Optional[int] = None,
+        max_chapters: Optional[int] = None,
+        min_year_released: Optional[int] = None,
+        max_year_released: Optional[int] = None,
+        status: Optional[List[str]] = None,
+        ratings: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch manhwas based on filters with pagination."""
+        try:
+            user_id = self.get_user_id(access_token)
+            # Validate filters
+            self._validate_filters(genres, categories, status, ratings)
+
+            # Build query
+            query = (
+                self.supabase.table("manhwas")
+                .select(
+                    """
+                    *,
+                    status(name),
+                    rating(name),
+                    manhwa_genres!inner(genre_id, genres(name)),
+                    manhwa_categories!inner(category_id, categories(name)),
+                    user_manhwa_progress(current_chapter, reading_status)
+                    """
+                )
+                .eq("user_manhwa_progress.user_id", user_id)
+            )  # Filter by the user_id
+
+            # Apply filters
+            if min_year_released:
+                query = query.gte("year_released", min_year_released)
+            if max_year_released:
+                query = query.lte("year_released", max_year_released)
+            if min_chapters:
+                query = query.gte("chapter_min", min_chapters)
+            if max_chapters:
+                query = query.lte("chapter_max", max_chapters)
+            if status:
+                query = query.in_("status_id", self._get_status_ids(status))
+            if ratings:
+                query = query.in_("rating_id", self._get_rating_ids(ratings))
+            if genres:
+                query = query.in_("id", self._get_manhwa_ids_by_genres(genres))
+            if categories:
+                query = query.in_("id", self._get_manhwa_ids_by_categories(categories))
+
+            # Add alphabetical sorting by name
+            query = query.order("name")  # Sort by name alphabetically
+
+            # Execute query
+            response = query.execute()
+            manhwas = response.data if response.data else []
+            processed_manhwas = self.process_manhwa_result(manhwas)
+            return processed_manhwas
 
         except ValidationError as e:
             raise e
@@ -349,7 +448,7 @@ class ManhwaDatabaseManager:
         access_token: str,
         manhwa_id: int,
         current_chapter: int,
-        status: str,
+        reading_status: str,
     ) -> List[Dict[str, Any]]:
         """Add progress for a specific manhwa."""
         try:
@@ -367,7 +466,7 @@ class ManhwaDatabaseManager:
             if existing.data:
                 # Update existing progress
                 return self.update_progress(
-                    access_token, manhwa_id, current_chapter, status
+                    access_token, manhwa_id, current_chapter, reading_status
                 )
 
             # Insert new progress
@@ -378,7 +477,7 @@ class ManhwaDatabaseManager:
                         "user_id": user_id,
                         "manhwa_id": manhwa_id,
                         "current_chapter": current_chapter,
-                        "status": status,
+                        "reading_status": reading_status,
                     }
                 )
                 .execute()
@@ -390,6 +489,35 @@ class ManhwaDatabaseManager:
             logger.error(f"Error adding progress: {str(e)}")
             raise DatabaseError("Failed to add progress")
 
+    def update_progress(
+        self,
+        access_token: str,
+        manhwa_id: int,
+        current_chapter: int,
+        reading_status: str,
+    ) -> List[Dict[str, Any]]:
+        """Update progress for a specific manhwa."""
+        try:
+            user_id = self.get_user_id(access_token)
+            response = (
+                self.supabase.table("user_manhwa_progress")
+                .update(
+                    {
+                        "current_chapter": current_chapter,
+                        "reading_status": reading_status,
+                    }
+                )
+                .eq("user_id", user_id)
+                .eq("manhwa_id", manhwa_id)
+                .execute()
+            )
+            return response.data if response.data else []
+        except AuthenticationError as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error updating progress: {str(e)}")
+            raise DatabaseError("Failed to update progress")
+
     def get_user_progress(self, access_token: str) -> List[Dict[str, Any]]:
         """Fetch progress for a specific user."""
         try:
@@ -399,8 +527,8 @@ class ManhwaDatabaseManager:
                 .select(
                     """
                     current_chapter,
-                    status,
-                    manhwas!user_manhwa_progress_manhwa_id_fkey (
+                    reading_status,
+                    manhwas (
                         *,
                         status(name),
                         rating(name),
@@ -413,12 +541,8 @@ class ManhwaDatabaseManager:
                 .execute()
             )
 
-            results = []
-            for item in response.data or []:
-                manhwa = [item.pop("manhwas", {})]
-                processed_manhwa = self.process_manhwa_result(manhwa)
-                results.append({**item, "manhwa": processed_manhwa[0]})
-            return results
+            processed_manhwa1 = self.process_manhwa_result(response.data)
+            return processed_manhwa1
 
         except AuthenticationError as e:
             raise e
@@ -430,7 +554,9 @@ class ManhwaDatabaseManager:
         """Fetch progress for a specific manhwa."""
         try:
             # Default counts for all statuses
-            status_counts = {status.value: 0 for status in ReadingStatus}
+            reading_status_counts = {
+                reading_status.value: 0 for reading_status in ReadingStatus
+            }
 
             response = self.supabase.rpc(
                 "get_manhwa_progress", {"manhwa_id_param": manhwa_id}
@@ -438,9 +564,9 @@ class ManhwaDatabaseManager:
 
             if response.data:
                 for entry in response.data:
-                    status_counts[entry["status"]] = entry["count"]
+                    reading_status_counts[entry["reading_status"]] = entry["count"]
 
-            return status_counts
+            return reading_status_counts
         except Exception as e:
             logger.error(f"Error getting manhwa progress: {str(e)}")
             raise DatabaseError("Failed to get manhwa progress")
