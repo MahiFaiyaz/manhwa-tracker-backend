@@ -194,87 +194,40 @@ class ManhwaDatabaseManager:
         max_year_released: Optional[int] = None,
         status: Optional[List[str]] = None,
         ratings: Optional[List[str]] = None,
+        access_token: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Fetch manhwas based on filters with pagination."""
         try:
             # Validate filters
             self._validate_filters(genres, categories, status, ratings)
 
-            # Build query
-            query = self.supabase.table("manhwas").select(
-                "*",
-                "status(name)",
-                "rating(name)",
-                "manhwa_genres!inner(genre_id, genres(name))",
-                "manhwa_categories!inner(category_id, categories(name))",
-            )
+            if access_token:
+                user_id = self.get_user_id(access_token)
+                # Build query
+                query = (
+                    self.supabase.table("manhwas")
+                    .select(
+                        """
+                        *,
+                        status(name),
+                        rating(name),
+                        manhwa_genres!inner(genre_id, genres(name)),
+                        manhwa_categories!inner(category_id, categories(name)),
+                        user_manhwa_progress(current_chapter, reading_status)
+                        """
+                    )
+                    .eq("user_manhwa_progress.user_id", user_id)
+                )  # Filter by the user_id
 
-            # Apply filters
-            if min_year_released:
-                query = query.gte("year_released", min_year_released)
-            if max_year_released:
-                query = query.lte("year_released", max_year_released)
-            if min_chapters:
-                query = query.gte("chapter_min", min_chapters)
-            if max_chapters:
-                query = query.lte("chapter_max", max_chapters)
-            if status:
-                query = query.in_("status_id", self._get_status_ids(status))
-            if ratings:
-                query = query.in_("rating_id", self._get_rating_ids(ratings))
-            if genres:
-                query = query.in_("id", self._get_manhwa_ids_by_genres(genres))
-            if categories:
-                query = query.in_("id", self._get_manhwa_ids_by_categories(categories))
-
-            # Add alphabetical sorting by name
-            query = query.order("name")  # Sort by name alphabetically
-
-            # Execute query
-            response = query.execute()
-            manhwas = response.data if response.data else []
-            processed_manhwas = self.process_manhwa_result(manhwas)
-            return processed_manhwas
-
-        except ValidationError as e:
-            raise e
-        except Exception as e:
-            logger.error(f"Error fetching manhwas: {str(e)}")
-            raise DatabaseError("Failed to fetch manhwas")
-
-    def get_manhwas_with_token(
-        self,
-        access_token: str,
-        genres: Optional[List[str]] = None,
-        categories: Optional[List[str]] = None,
-        min_chapters: Optional[int] = None,
-        max_chapters: Optional[int] = None,
-        min_year_released: Optional[int] = None,
-        max_year_released: Optional[int] = None,
-        status: Optional[List[str]] = None,
-        ratings: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
-        """Fetch manhwas based on filters with pagination."""
-        try:
-            user_id = self.get_user_id(access_token)
-            # Validate filters
-            self._validate_filters(genres, categories, status, ratings)
-
-            # Build query
-            query = (
-                self.supabase.table("manhwas")
-                .select(
-                    """
-                    *,
-                    status(name),
-                    rating(name),
-                    manhwa_genres!inner(genre_id, genres(name)),
-                    manhwa_categories!inner(category_id, categories(name)),
-                    user_manhwa_progress(current_chapter, reading_status)
-                    """
+            else:
+                # Build query
+                query = self.supabase.table("manhwas").select(
+                    "*",
+                    "status(name)",
+                    "rating(name)",
+                    "manhwa_genres!inner(genre_id, genres(name))",
+                    "manhwa_categories!inner(category_id, categories(name))",
                 )
-                .eq("user_manhwa_progress.user_id", user_id)
-            )  # Filter by the user_id
 
             # Apply filters
             if min_year_released:

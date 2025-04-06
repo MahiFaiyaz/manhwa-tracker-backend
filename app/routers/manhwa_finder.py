@@ -70,40 +70,21 @@ def get_manhwas(
             "Minimum year released cannot be greater than maximum year released"
         )
 
-    if access_token:
-        try:
-            result = db.get_manhwas_with_token(
-                access_token,
-                genres=filter.genres,
-                categories=filter.categories,
-                min_chapters=filter.min_chapters,
-                max_chapters=filter.max_chapters,
-                min_year_released=filter.min_year_released,
-                max_year_released=filter.max_year_released,
-                status=filter.status,
-                ratings=filter.ratings,
-            )
+    try:
+        result = db.get_manhwas(
+            genres=filter.genres,
+            categories=filter.categories,
+            min_chapters=filter.min_chapters,
+            max_chapters=filter.max_chapters,
+            min_year_released=filter.min_year_released,
+            max_year_released=filter.max_year_released,
+            status=filter.status,
+            ratings=filter.ratings,
+            access_token=access_token,
+        )
 
-            return result
-        except ValidationError as e:
-            raise e
-        except Exception as e:
-            raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
-    else:
-        try:
-            result = db.get_manhwas(
-                genres=filter.genres,
-                categories=filter.categories,
-                min_chapters=filter.min_chapters,
-                max_chapters=filter.max_chapters,
-                min_year_released=filter.min_year_released,
-                max_year_released=filter.max_year_released,
-                status=filter.status,
-                ratings=filter.ratings,
-            )
-
-            return result
-        except ValidationError as e:
-            raise e
-        except Exception as e:
-            raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
+        return result
+    except ValidationError as e:
+        raise e
+    except Exception as e:
+        raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
