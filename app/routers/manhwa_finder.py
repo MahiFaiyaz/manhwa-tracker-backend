@@ -7,10 +7,10 @@ from app.schemas.manhwa import (
     RatingBase,
     StatusBase,
     ManhwaFilter,
-    ManhwaBase,
+    ManhwaWithProgress,
 )
 from app.core.exceptions import DatabaseError, ValidationError
-from app.core.dependencies import get_db_manager
+from app.core.dependencies import get_db_manager, get_bearer_token
 
 router = APIRouter(tags=["Manhwa-Finder"])
 
@@ -49,10 +49,11 @@ def get_statuses(db: ManhwaDatabaseManager = Depends(get_db_manager)):
 
 @router.post(
     "/manhwas",
-    response_model=List[ManhwaBase],  # For pagination metadata
+    response_model=List[ManhwaWithProgress],
 )
 def get_manhwas(
     filter: ManhwaFilter,
+    access_token: str = Depends(get_bearer_token(required=False)),
     db: ManhwaDatabaseManager = Depends(get_db_manager),
 ):
     # Input validation
@@ -69,22 +70,40 @@ def get_manhwas(
             "Minimum year released cannot be greater than maximum year released"
         )
 
-    try:
-        # This should return a dict with data and pagination info
-        # The 'data' key should contain a list of ManhwaBase objects
-        result = db.get_manhwas(
-            genres=filter.genres,
-            categories=filter.categories,
-            min_chapters=filter.min_chapters,
-            max_chapters=filter.max_chapters,
-            min_year_released=filter.min_year_released,
-            max_year_released=filter.max_year_released,
-            status=filter.status,
-            ratings=filter.ratings,
-        )
+    if access_token:
+        try:
+            result = db.get_manhwas_with_token(
+                access_token,
+                genres=filter.genres,
+                categories=filter.categories,
+                min_chapters=filter.min_chapters,
+                max_chapters=filter.max_chapters,
+                min_year_released=filter.min_year_released,
+                max_year_released=filter.max_year_released,
+                status=filter.status,
+                ratings=filter.ratings,
+            )
 
-        return result
-    except ValidationError as e:
-        raise e
-    except Exception as e:
-        raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
+            return result
+        except ValidationError as e:
+            raise e
+        except Exception as e:
+            raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
+    else:
+        try:
+            result = db.get_manhwas(
+                genres=filter.genres,
+                categories=filter.categories,
+                min_chapters=filter.min_chapters,
+                max_chapters=filter.max_chapters,
+                min_year_released=filter.min_year_released,
+                max_year_released=filter.max_year_released,
+                status=filter.status,
+                ratings=filter.ratings,
+            )
+
+            return result
+        except ValidationError as e:
+            raise e
+        except Exception as e:
+            raise DatabaseError(f"Failed to retrieve manhwas: {str(e)}")
