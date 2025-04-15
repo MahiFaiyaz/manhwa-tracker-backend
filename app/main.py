@@ -10,6 +10,8 @@ from app.core.logging import get_logger
 from app.core.exceptions import setup_exception_handlers
 from app.middleware.logging_middleware import LoggingMiddleware
 from contextlib import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
+
 
 settings = get_settings()
 logger = get_logger("app")
@@ -43,6 +45,15 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add middlewares
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://manhwa-tracker-565ed.web.app",  # ✅ your live Flutter app
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Root API
