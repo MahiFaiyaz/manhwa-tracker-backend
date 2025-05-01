@@ -25,28 +25,24 @@ class ManhwaDatabaseManager:
         with get_db() as supabase:
             self.supabase = supabase
 
-    @lru_cache(maxsize=128)
     def get_genres(self) -> List[Dict[str, Any]]:
         """Fetch all genres with name and description."""
         from app.services.manhwa_utils import get_genres
 
         return get_genres(self.supabase)
 
-    @lru_cache(maxsize=128)
     def get_categories(self) -> List[Dict[str, Any]]:
         """Fetch all categories with name and description."""
         from app.services.manhwa_utils import get_categories
 
         return get_categories(self.supabase)
 
-    @lru_cache(maxsize=128)
     def get_ratings(self) -> List[Dict[str, Any]]:
         """Fetch all ratings with name and description."""
         from app.services.manhwa_utils import get_ratings
 
         return get_ratings(self.supabase)
 
-    @lru_cache(maxsize=128)
     def get_statuses(self) -> List[Dict[str, Any]]:
         """Fetch all statuses with name and description."""
         from app.services.manhwa_utils import get_statuses
