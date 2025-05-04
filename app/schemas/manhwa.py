@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class ReadingStatus(str, Enum):
     """Enum for reading status."""
 
-    PLANNING = "planning"
+    TO_READ = "to_read"
     READING = "reading"
     COMPLETED = "completed"
     DROPPED = "dropped"
@@ -83,7 +83,7 @@ class ManhwaFilter(BaseModel):
 class ManhwaProgressResponse(BaseModel):
     """Response model for manhwa progress statistics."""
 
-    planning: int = 0
+    to_read: int = 0
     reading: int = 0
     completed: int = 0
     dropped: int = 0
