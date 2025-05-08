@@ -146,6 +146,28 @@ class UserAuthManager:
             logger.error(f"Error getting user progress: {str(e)}")
             raise DatabaseError("Failed to get user progress")
 
+    def delete_progress(self, access_token: str, manhwa_id: int) -> None:
+        """Delete a user's progress entry for a specific manhwa."""
+        try:
+            with get_db() as supabase:
+                user_id = get_user_id(supabase, access_token)
+
+                response = (
+                    supabase.table("user_manhwa_progress")
+                    .delete()
+                    .eq("user_id", user_id)
+                    .eq("manhwa_id", manhwa_id)
+                    .execute()
+                )
+
+                if response.error:
+                    raise DatabaseError(f"Delete error: {response.error}")
+        except AuthenticationError as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error deleting progress: {str(e)}")
+            raise DatabaseError("Failed to delete progress")
+
     def refresh_token(self, refresh_token: str) -> Tuple[str, str]:
         """Refresh access token using refresh token."""
         try:

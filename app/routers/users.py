@@ -64,6 +64,19 @@ async def get_user_progress(
         raise DatabaseError(f"Failed to get user progress: {str(e)}")
 
 
+@router.delete("/progress/{manhwa_id}")
+async def delete_user_progress(
+    manhwa_id: int,
+    access_token: str = Depends(get_bearer_token(required=True)),
+    db: UserAuthManager = Depends(get_auth_manager),
+):
+    try:
+        db.delete_progress(access_token, manhwa_id)
+        return {"message": "Progress deleted successfully"}
+    except Exception as e:
+        raise DatabaseError(f"Failed to delete progress: {str(e)}")
+
+
 @router.get("/email-confirmation")
 async def email_confirmation():
     return HTMLResponse(
