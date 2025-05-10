@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional
 from app.core.logging import get_logger
 from app.core.exceptions import DatabaseError, ValidationError, AuthenticationError
+from collections import Counter
 
 logger = get_logger("manhwa_utils")
 
@@ -193,13 +194,21 @@ def get_category_ids(supabase, category_names: List[str]) -> List[int]:
 def get_manhwa_ids_by_genres(supabase, genres: List[str]) -> List[int]:
     """Get manhwa IDs by genre names."""
     try:
+        genre_ids = get_genre_ids(supabase, genres)
         response = (
             supabase.table("manhwa_genres")
-            .select("manhwa_id")
-            .in_("genre_id", get_genre_ids(supabase, genres))
+            .select("manhwa_id, genre_id")
+            .in_("genre_id", genre_ids)
             .execute()
         )
-        return [row["manhwa_id"] for row in response.data] if response.data else []
+        if not response.data:
+            return []
+
+        manhwa_ids = [row["manhwa_id"] for row in response.data]
+        count = Counter(manhwa_ids)
+
+        # Return only manhwas that matched *all* selected genres
+        return [manhwa_id for manhwa_id, c in count.items() if c == len(genre_ids)]
     except Exception as e:
         logger.error(f"Error getting manhwa IDs by genres: {str(e)}")
         raise DatabaseError("Failed to get manhwa IDs by genres")
@@ -208,13 +217,21 @@ def get_manhwa_ids_by_genres(supabase, genres: List[str]) -> List[int]:
 def get_manhwa_ids_by_categories(supabase, categories: List[str]) -> List[int]:
     """Get manhwa IDs by category names."""
     try:
+        category_ids = get_category_ids(supabase, categories)
         response = (
             supabase.table("manhwa_categories")
-            .select("manhwa_id")
-            .in_("category_id", get_category_ids(supabase, categories))
+            .select("manhwa_id, category_id")
+            .in_("category_id", category_ids)
             .execute()
         )
-        return [row["manhwa_id"] for row in response.data] if response.data else []
+        if not response.data:
+            return []
+
+        manhwa_ids = [row["manhwa_id"] for row in response.data]
+        count = Counter(manhwa_ids)
+
+        # Return only manhwas that matched *all* selected genres
+        return [manhwa_id for manhwa_id, c in count.items() if c == len(category_ids)]
     except Exception as e:
         logger.error(f"Error getting manhwa IDs by categories: {str(e)}")
         raise DatabaseError("Failed to get manhwa IDs by categories")
