@@ -160,8 +160,7 @@ class UserAuthManager:
                     .execute()
                 )
 
-                if response.error:
-                    raise DatabaseError(f"Delete error: {response.error}")
+                return response.data if response.data else []
         except AuthenticationError as e:
             raise e
         except Exception as e:
