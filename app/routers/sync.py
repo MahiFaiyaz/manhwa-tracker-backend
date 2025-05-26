@@ -11,6 +11,8 @@ logger = get_logger("sync")
 @router.post("/sync")
 async def sync(background_tasks: BackgroundTasks, api_key: str = Header(None)):
     # Validate API key
+    print(f"syncapikey: {settings.SYNC_API_KEY}")
+    print(f"apikey: {api_key}")
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
 
@@ -75,8 +77,6 @@ async def sync_missing_images(
 async def sync_all_images(
     background_tasks: BackgroundTasks, api_key: str = Header(None)
 ):
-    print(settings.SYNC_API_KEY)
-    print(api_key)
     # Validate API key
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
