@@ -59,15 +59,6 @@ class GoogleSheetsManager:
             ]
             dict_data = gspread.utils.to_records(headers, data)
 
-            folder_path = "manhwa_data"
-            os.makedirs(folder_path, exist_ok=True)
-
-            # Save JSON file inside the 'manhwa_data' directory
-            file_path = os.path.join(folder_path, f"{sheet_name}.json")
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(dict_data, f, indent=4)  # Pretty print JSON
-
-            logger.info(f"Successfully fetched and saved data from {sheet_name}")
             return dict_data
         except gspread.exceptions.APIError as e:
             logger.error(f"Google Sheets API error: {e}")
@@ -79,37 +70,40 @@ class GoogleSheetsManager:
     def fetch_master_list(self):
         logger.info("Fetching master list data")
         sheet_name = "Copy of Master List"
-        self.fetch_data(sheet_name, "0:9", header_row_index=7)
+        return self.fetch_data(sheet_name, "0:9", header_row_index=7)
 
     def fetch_genres(self):
         logger.info("Fetching genres data")
         sheet_name = "Genres"
-        self.fetch_data(sheet_name, "3:4", header_row_index=1)
+        return self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_categories(self):
         logger.info("Fetching categories data")
         sheet_name = "Categories"
-        self.fetch_data(sheet_name, "3, 5", header_row_index=1)
+        return self.fetch_data(sheet_name, "3, 5", header_row_index=1)
 
     def fetch_status(self):
         logger.info("Fetching status data")
         sheet_name = "Status"
-        self.fetch_data(sheet_name, "3:4", header_row_index=1)
+        return self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_rating(self):
         logger.info("Fetching rating data")
         sheet_name = "Rating"
-        self.fetch_data(sheet_name, "3:4", header_row_index=1)
+        return self.fetch_data(sheet_name, "3:4", header_row_index=1)
 
     def fetch_all(self):
         logger.info("Starting fetch of all data")
         try:
-            self.fetch_genres()
-            self.fetch_categories()
-            self.fetch_status()
-            self.fetch_rating()
-            self.fetch_master_list()
+            data = {
+                "genres": self.fetch_genres(),
+                "categories": self.fetch_categories(),
+                "status": self.fetch_status(),
+                "rating": self.fetch_rating(),
+                "master_list": self.fetch_master_list(),
+            }
             logger.info("All data fetched successfully")
+            return data
         except Exception as e:
             logger.error(f"Error during fetch all operation: {str(e)}")
             raise DatabaseError(f"Failed to fetch all data: {str(e)}")
