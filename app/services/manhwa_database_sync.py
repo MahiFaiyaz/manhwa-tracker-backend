@@ -338,7 +338,6 @@ class ManhwaSync:
         """Syncs genres data to Supabase."""
         try:
             logger.info("Syncing genres data")
-            data = self.load_json("genres.json")
             self.sync_items(
                 "genres", data, {"Genre": "name", "Description": "description"}
             )
@@ -350,7 +349,6 @@ class ManhwaSync:
         """Syncs categories data to Supabase."""
         try:
             logger.info("Syncing categories data")
-            data = self.load_json("categories.json")
             self.sync_items(
                 "categories",
                 data,
@@ -364,7 +362,6 @@ class ManhwaSync:
         """Syncs ratings data to Supabase."""
         try:
             logger.info("Syncing ratings data")
-            data = self.load_json("rating.json")
             self.sync_items(
                 "rating", data, {"Rating": "name", "Description": "description"}
             )
@@ -376,7 +373,6 @@ class ManhwaSync:
         """Syncs status data to Supabase."""
         try:
             logger.info("Syncing status data")
-            data = self.load_json("status.json")
             self.sync_items(
                 "status", data, {"Status": "name", "Description": "description"}
             )
