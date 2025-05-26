@@ -1,0 +1,16 @@
+name: Sync all images
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"  # Runs every sunday (UTC)
+  workflow_dispatch:     # Allows manual trigger from GitHub UI
+
+jobs:
+  call-sync-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Sync all images API
+        run: |
+          curl -X POST https://manhwa-tracker-backend.onrender.com/sync_all_images \
+            -H "Content-Type: application/json" \
+            -H "api-key: ${{ secrets.SYNC_API_KEY }}"
