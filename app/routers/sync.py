@@ -21,7 +21,8 @@ async def sync(
     api_key = request.headers.get("api-key")
     print(f"🔑 Received api-key: {api_key}")
     print(f"🔐 Expected key: {settings.SYNC_API_KEY}")
-    print(f"new api key: {request.headers.get("api_key")}")
+    api_key = request.headers.get("api_key")
+    print(f"🔑 Received api_key: {api_key}")
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
 
