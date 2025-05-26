@@ -9,20 +9,11 @@ logger = get_logger("sync")
 
 
 @router.post("/sync")
-async def sync(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    api_key: str = Header(None, alias="api-key"),
-):
-    # Validate API key
-    print("🧾 All headers:", dict(request.headers))
+async def sync(request: Request, background_tasks: BackgroundTasks):
 
-    # You can still manually pull the header
-    api_key = request.headers.get("api-key")
-    print(f"🔑 Received api-key: {api_key}")
-    print(f"🔐 Expected key: {settings.SYNC_API_KEY}")
+    # Validate API key
     api_key = request.headers.get("api_key")
-    print(f"🔑 Received api_key: {api_key}")
+
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
 
@@ -36,10 +27,10 @@ async def sync(
             syncer = ManhwaSync()
 
             # Fetch data first
-            data_manager.fetch_all()
+            all_data = data_manager.fetch_all()
 
             # Then sync the data
-            syncer.sync_all()
+            syncer.sync_all(all_data)
 
             logger.info("Database sync completed successfully")
         except DatabaseError as e:
@@ -54,10 +45,11 @@ async def sync(
 
 
 @router.post("/sync_missing_images")
-async def sync_missing_images(
-    background_tasks: BackgroundTasks, api_key: str = Header(None)
-):
+async def sync_missing_images(request: Request, background_tasks: BackgroundTasks):
+
     # Validate API key
+    api_key = request.headers.get("api_key")
+
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
 
@@ -84,10 +76,11 @@ async def sync_missing_images(
 
 
 @router.post("/sync_all_images")
-async def sync_all_images(
-    background_tasks: BackgroundTasks, api_key: str = Header(None)
-):
+async def sync_all_images(request: Request, background_tasks: BackgroundTasks):
+
     # Validate API key
+    api_key = request.headers.get("api_key")
+
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
 
