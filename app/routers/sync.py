@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Header
+from fastapi import APIRouter, BackgroundTasks, Header, Request
 from app.core.settings import get_settings
 from app.core.exceptions import DatabaseError, AuthenticationError
 from app.core.logging import get_logger
@@ -9,10 +9,17 @@ logger = get_logger("sync")
 
 
 @router.post("/sync")
-async def sync(background_tasks: BackgroundTasks, api_key: str = Header(None)):
+async def sync(
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
     # Validate API key
-    print(f"syncapikey: {settings.SYNC_API_KEY}")
-    print(f"apikey: {api_key}")
+    print("🧾 All headers:", dict(request.headers))
+
+    # You can still manually pull the header
+    api_key = request.headers.get("api-key")
+    print(f"🔑 Received api-key: {api_key}")
+    print(f"🔐 Expected key: {settings.SYNC_API_KEY}")
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
 
