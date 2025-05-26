@@ -13,4 +13,4 @@ jobs:
         run: |
           curl -X POST https://manhwa-tracker-backend.onrender.com/sync \
             -H "Content-Type: application/json" \
-            -H "api_key: ${{ secrets.SYNC_API_KEY }}"
+            -H "api-key: ${{ secrets.SYNC_API_KEY }}"
