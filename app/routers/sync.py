@@ -13,7 +13,7 @@ async def sync(request: Request, background_tasks: BackgroundTasks):
 
     # Validate API key
     print(request.headers)
-    api_key = request.headers.get("api_key")
+    api_key = request.headers.get("api-key")
 
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
@@ -49,7 +49,7 @@ async def sync(request: Request, background_tasks: BackgroundTasks):
 async def sync_missing_images(request: Request, background_tasks: BackgroundTasks):
 
     # Validate API key
-    api_key = request.headers.get("api_key")
+    api_key = request.headers.get("api-key")
 
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
@@ -80,7 +80,7 @@ async def sync_missing_images(request: Request, background_tasks: BackgroundTask
 async def sync_all_images(request: Request, background_tasks: BackgroundTasks):
 
     # Validate API key
-    api_key = request.headers.get("api_key")
+    api_key = request.headers.get("api-key")
 
     if api_key != settings.SYNC_API_KEY:
         raise AuthenticationError("Invalid API Key for sync operation")
