@@ -1,0 +1,16 @@
+name: Sync Manhwa Database
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # Runs every hour (UTC)
+  workflow_dispatch:     # Allows manual trigger from GitHub UI
+
+jobs:
+  call-sync-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Sync API
+        run: |
+          curl -X POST https://manhwa-tracker-backend.onrender.com/sync \
+            -H "Content-Type: application/json" \
+            -H "api_key: ${{ secrets.SYNC_API_KEY }}"
