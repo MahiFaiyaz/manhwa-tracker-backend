@@ -144,12 +144,10 @@ class ManhwaSync:
             logger.error(f"Error fetching records from {table_name}: {str(e)}")
             raise DatabaseError(f"Failed to fetch records from {table_name}: {str(e)}")
 
-    def sync_manhwas(self):
+    def sync_manhwas(self, data):
         """Syncs manhwa data to Supabase, updating and deleting entries properly."""
         logger.info("Syncing manhwa data")
         try:
-            data = self.load_json("copy of master list.json")
-
             db_records = {}
             with get_db() as supabase:
                 page = 1
@@ -336,7 +334,7 @@ class ManhwaSync:
             logger.error(f"Error linking manhwa relationships: {str(e)}")
             raise DatabaseError(f"Failed to link manhwa relationships: {str(e)}")
 
-    def sync_genres(self):
+    def sync_genres(self, data):
         """Syncs genres data to Supabase."""
         try:
             logger.info("Syncing genres data")
@@ -348,7 +346,7 @@ class ManhwaSync:
             logger.error(f"Error syncing genres: {str(e)}")
             raise DatabaseError(f"Failed to sync genres: {str(e)}")
 
-    def sync_categories(self):
+    def sync_categories(self, data):
         """Syncs categories data to Supabase."""
         try:
             logger.info("Syncing categories data")
@@ -362,7 +360,7 @@ class ManhwaSync:
             logger.error(f"Error syncing categories: {str(e)}")
             raise DatabaseError(f"Failed to sync categories: {str(e)}")
 
-    def sync_ratings(self):
+    def sync_ratings(self, data):
         """Syncs ratings data to Supabase."""
         try:
             logger.info("Syncing ratings data")
@@ -374,7 +372,7 @@ class ManhwaSync:
             logger.error(f"Error syncing ratings: {str(e)}")
             raise DatabaseError(f"Failed to sync ratings: {str(e)}")
 
-    def sync_status(self):
+    def sync_status(self, data):
         """Syncs status data to Supabase."""
         try:
             logger.info("Syncing status data")
@@ -386,15 +384,20 @@ class ManhwaSync:
             logger.error(f"Error syncing status: {str(e)}")
             raise DatabaseError(f"Failed to sync status: {str(e)}")
 
-    def sync_all(self):
+    def sync_all(self, all_data):
         """Runs all sync functions."""
         logger.info("Starting sync of all data")
+        genres = all_data["genres"]
+        categories = all_data["categories"]
+        rating = all_data["rating"]
+        status = all_data["status"]
+        master_list = all_data["master_list"]
         try:
-            self.sync_genres()
-            self.sync_categories()
-            self.sync_ratings()
-            self.sync_status()
-            self.sync_manhwas()
+            self.sync_genres(genres)
+            self.sync_categories(categories)
+            self.sync_ratings(rating)
+            self.sync_status(status)
+            self.sync_manhwas(master_list)
             logger.info("All data synced successfully")
         except Exception as e:
             logger.error(f"Error during sync all operation: {str(e)}")
