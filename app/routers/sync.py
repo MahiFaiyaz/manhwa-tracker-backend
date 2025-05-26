@@ -12,6 +12,7 @@ logger = get_logger("sync")
 async def sync(request: Request, background_tasks: BackgroundTasks):
 
     # Validate API key
+    print(request.headers)
     api_key = request.headers.get("api_key")
 
     if api_key != settings.SYNC_API_KEY:

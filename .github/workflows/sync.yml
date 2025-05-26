@@ -2,7 +2,7 @@ name: Sync Manhwa Database
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # Runs every hour (UTC)
+    - cron: "0 0 * * *"  # Runs every day (UTC)
   workflow_dispatch:     # Allows manual trigger from GitHub UI
 
 jobs:
